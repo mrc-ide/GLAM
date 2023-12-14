@@ -5,11 +5,8 @@
 using namespace cpp11;
 
 [[cpp11::register]]
-int cpp_test() {
-  
-  
-  std::vector<int> x = seq_int(1, 5);
-  print_vector(x);
+int mcmc_cpp(cpp11::sexp rng_ptr) {
+  print("foo");
   
   return 5;
 }

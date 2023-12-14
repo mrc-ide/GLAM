@@ -17,7 +17,7 @@ square <- function(x = 1:5) {
   message("running R square function")
   
   # do something
-  ret <- cpp_test()
+  ret <- 5
   
   # return
   return(ret)

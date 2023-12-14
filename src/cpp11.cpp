@@ -6,16 +6,16 @@
 #include <R_ext/Visibility.h>
 
 // main.cpp
-int cpp_test();
-extern "C" SEXP _GLAM_cpp_test() {
+int mcmc_cpp(cpp11::sexp rng_ptr);
+extern "C" SEXP _GLAM_mcmc_cpp(SEXP rng_ptr) {
   BEGIN_CPP11
-    return cpp11::as_sexp(cpp_test());
+    return cpp11::as_sexp(mcmc_cpp(cpp11::as_cpp<cpp11::decay_t<cpp11::sexp>>(rng_ptr)));
   END_CPP11
 }
 
 extern "C" {
 static const R_CallMethodDef CallEntries[] = {
-    {"_GLAM_cpp_test", (DL_FUNC) &_GLAM_cpp_test, 0},
+    {"_GLAM_mcmc_cpp", (DL_FUNC) &_GLAM_mcmc_cpp, 1},
     {NULL, NULL, 0}
 };
 }

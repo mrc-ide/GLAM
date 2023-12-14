@@ -17,11 +17,15 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 RoxygenNote: 7.2.3
 LinkingTo: 
-    cpp11
+    cpp11,
+    dust
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Imports: 
     dplyr,
-    ggplot2
+    ggplot2,
+    dust
+Remotes:
+  mrc-ide/dust
 BugReports: https://github.com/mrc-ide/GLAM
