@@ -29,6 +29,9 @@
 sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
                     ind_name = "ind1", return_full = FALSE) {
   
+  ret <- cpp_test()
+  return(ret)
+  
   # check inputs
   assert_vector_numeric(samp_time)
   assert_greq(length(samp_time), 2)

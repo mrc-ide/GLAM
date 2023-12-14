@@ -5,7 +5,7 @@
 #include "cpp11/declarations.hpp"
 #include <R_ext/Visibility.h>
 
-// code.cpp
+// main.cpp
 int cpp_test();
 extern "C" SEXP _GLAM_cpp_test() {
   BEGIN_CPP11
