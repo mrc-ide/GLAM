@@ -4,7 +4,7 @@
 \alias{sim_cohort}
 \title{Simulate a complete cohort of individuals}
 \usage{
-sim_cohort(n, samp_time, haplo_freqs, lambda, decay_rate, sens)
+sim_cohort(n, samp_time, haplo_freqs, lambda, theta, decay_rate, sens)
 }
 \arguments{
 \item{n}{number of individuals in cohort.}
@@ -15,6 +15,8 @@ Must be at least two unique time points increasing in value.}
 \item{haplo_freqs}{vector of population-level haplotype frequencies.}
 
 \item{lambda}{force of infection.}
+
+\item{theta}{COI intensity parameter.}
 
 \item{decay_rate}{rate at which haplotypes clear.}
 

@@ -51,7 +51,7 @@ plot_ind <- function(ind) {
   
   plot1 <- ggplot(df_plot) + theme_bw() +
     geom_vline(xintercept = t_inf, linetype = "dashed") +
-    geom_point(aes(x = start, y = haplo), pch = 4, stroke = 1) +
+    geom_point(aes(x = start, y = haplo), size = 3, pch = 4, stroke = 1.3) +
     geom_segment(aes(x = start, y = haplo, xend = end, yend = haplo)) +
     xlab("Time") + ylab("Haplotype") +
     xlim(c(start_time, end_time)) + ylim(c(1, n_haplo)) +
@@ -67,7 +67,7 @@ plot_ind <- function(ind) {
   
   plot2 <- plot1 + 
     geom_point(aes(x = time, y = haplo, alpha = state_true, col = state_obs),
-               data = df_plot) +
+               size = 3, data = df_plot) +
     scale_color_discrete(name = "Observed status") +
     scale_alpha_manual(values = c(0.1, 1), name = "True status")
   

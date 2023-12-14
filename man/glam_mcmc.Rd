@@ -6,11 +6,19 @@
 \description{
 Create a new glam_mcmc object to run an MCMC.
 }
+\section{Public fields}{
+\if{html}{\out{<div class="r6-fields">}}
+\describe{
+\item{\code{example_public_var}}{example.}
+}
+\if{html}{\out{</div>}}
+}
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-glam_mcmc-new}{\code{glam_mcmc$new()}}
-\item \href{#method-glam_mcmc-burnin}{\code{glam_mcmc$burnin()}}
+\item \href{#method-glam_mcmc-params}{\code{glam_mcmc$params()}}
+\item \href{#method-glam_mcmc-burn}{\code{glam_mcmc$burn()}}
 \item \href{#method-glam_mcmc-print}{\code{glam_mcmc$print()}}
 \item \href{#method-glam_mcmc-clone}{\code{glam_mcmc$clone()}}
 }
@@ -33,12 +41,55 @@ Load data into the glam_mcmc object.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-glam_mcmc-burnin"></a>}}
-\if{latex}{\out{\hypertarget{method-glam_mcmc-burnin}{}}}
-\subsection{Method \code{burnin()}}{
+\if{html}{\out{<a id="method-glam_mcmc-params"></a>}}
+\if{latex}{\out{\hypertarget{method-glam_mcmc-params}{}}}
+\subsection{Method \code{params()}}{
+Define model parameters.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{glam_mcmc$params(
+  chains = 5,
+  rungs = 1,
+  lambda = NULL,
+  theta = NULL,
+  decay_rate = NULL,
+  sens = NULL,
+  n_infections = NULL,
+  haplo_freqs = NULL,
+  max_infections = 5
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{chains}}{the number of independent chains.}
+
+\item{\code{rungs}}{TODO}
+
+\item{\code{lambda}}{TODO}
+
+\item{\code{theta}}{TODO}
+
+\item{\code{decay_rate}}{TODO}
+
+\item{\code{sens}}{TODO}
+
+\item{\code{n_infections}}{TODO}
+
+\item{\code{haplo_freqs}}{TODO}
+
+\item{\code{max_infections}}{TODO}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-glam_mcmc-burn"></a>}}
+\if{latex}{\out{\hypertarget{method-glam_mcmc-burn}{}}}
+\subsection{Method \code{burn()}}{
 Run burn-in MCMC
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{glam_mcmc$burnin(iterations, target_acceptance = 0.44, silent = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{glam_mcmc$burn(iterations, target_acceptance = 0.44, silent = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{

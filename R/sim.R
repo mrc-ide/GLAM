@@ -176,21 +176,30 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
 #' @importFrom dplyr bind_rows
 #' @export
 
-sim_cohort <- function(n, samp_time, haplo_freqs, lambda, decay_rate, sens) {
+sim_cohort <- function(n, samp_time, haplo_freqs, lambda, theta, decay_rate, sens) {
+  
+  # check inputs
+  assert_vector_pos(lambda)
+  
+  # fix input formats
+  if (length(lambda) == 1) {
+    lambda <- rep(lambda, n)
+  }
   
   # simulate each individual
   raw_list <- list()
   for (i in 1:n) {
-    raw_list[[i]] <- sim_ind(samp_time, haplo_freqs, lambda[i], decay_rate, sens)
+    raw_list[[i]] <- sim_ind(samp_time = samp_time,
+                             haplo_freqs = haplo_freqs,
+                             lambda = lambda[i],
+                             theta = theta,
+                             decay_rate = decay_rate,
+                             sens = sens,
+                             ind_name = sprintf("ind%s", i))
   }
   
-  # get observed data into data.frame
-  df_data <- mapply(function(i) {
-    data.frame(ind = i,
-               haplo = seq_along(haplo_freqs),
-               time = rep(samp_time, each = length(haplo_freqs)),
-               positive = as.vector(raw_list[[i]]$state_obs))
-  }, seq_along(raw_list), SIMPLIFY = FALSE) |>
+  # combine observed data into single data.frame over all individuals
+  df_data <- mapply(function(x) x$df_data, raw_list, SIMPLIFY = FALSE) |>
     bind_rows()
   
   # return as list

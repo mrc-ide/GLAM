@@ -25,7 +25,8 @@ Config/testthat/edition: 3
 Imports: 
     dplyr,
     ggplot2,
-    dust
+    dust,
+    R6
 Remotes:
   mrc-ide/dust
 BugReports: https://github.com/mrc-ide/GLAM

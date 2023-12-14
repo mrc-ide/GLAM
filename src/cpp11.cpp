@@ -6,7 +6,7 @@
 #include <R_ext/Visibility.h>
 
 // main.cpp
-int mcmc_cpp(cpp11::sexp rng_ptr);
+list mcmc_cpp(cpp11::sexp rng_ptr);
 extern "C" SEXP _GLAM_mcmc_cpp(SEXP rng_ptr) {
   BEGIN_CPP11
     return cpp11::as_sexp(mcmc_cpp(cpp11::as_cpp<cpp11::decay_t<cpp11::sexp>>(rng_ptr)));
