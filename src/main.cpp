@@ -17,6 +17,9 @@ list mcmc_cpp(const int iterations,
   
   print("Running C++ code");
   
+  // start timer
+  std::chrono::high_resolution_clock::time_point t0 =  std::chrono::high_resolution_clock::now();
+  
   // extract proposal sd
   std::vector<std::vector<double>> proposal_sd_array = list_to_mat_double(proposal_sd);
   int n_proposal_sd = proposal_sd_array[0].size();
@@ -31,13 +34,14 @@ list mcmc_cpp(const int iterations,
   int iteration_counter = iteration_counter_init + 1;
   writable::integers_matrix<> acceptance_out(n_rung, n_proposal_sd);
   cpp11_init(acceptance_out, 0);
-  //writable::integers swap_acceptance_out(n_rung - 1);
-  //cpp11_init(swap_acceptance_out, 0);
+  writable::integers swap_acceptance_out(n_rung - 1);
+  cpp11_init(swap_acceptance_out, 0);
   
   // dummy MCMC
   int start_i = 0;
   if (burnin && iteration_counter_init == 0) {
     start_i = 1;
+    iteration_counter++;
   }
   for (int i = start_i; i < iterations; ++i) {
     
@@ -53,18 +57,23 @@ list mcmc_cpp(const int iterations,
     
     // mock Metropolis coupling
     for (int r = 0; r < (n_rung - 1); ++r) {
-      //swap_acceptance_out[r] = 10;
+      swap_acceptance_out[r]++;
     }
     
     iteration_counter++;
     
   }  // close main MCMC loop
   
-  // Return outputs in a list
+  // calculate elapsed time
+  std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> time_span = std::chrono::duration_cast< std::chrono::duration<double> >(t1 - t0);
+  double dur = time_span.count();
+  
+  // return outputs in a list
   return writable::list({
-    "foo"_nm = -9,
     "acceptance_out"_nm = acceptance_out,
-    //"swap_acceptance_out"_nm = swap_acceptance_out,
+    "swap_acceptance_out"_nm = swap_acceptance_out,
+    "dur"_nm = dur,
     "rng_ptr"_nm = rng_ptr
   });
 }

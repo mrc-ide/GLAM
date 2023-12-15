@@ -73,16 +73,16 @@ glam_mcmc <- R6::R6Class(
       # get haplotype info
       private$n_haplos <- length(unique(df_data$haplo))
       private$haplo_freqs <- df_data |>
-        group_by(haplo) |>
-        summarise(haplo_freq = mean(positive)) |>
-        arrange(haplo) |>
-        pull(haplo_freq)
+        dplyr::group_by(haplo) |>
+        dplyr::summarise(haplo_freq = mean(positive)) |>
+        dplyr::arrange(haplo) |>
+        dplyr::pull(haplo_freq)
       
       # get observation time info
       df_data_time <- df_data |>
-        group_by(ind) |>
-        reframe(time = unique(time)) |>
-        arrange(ind, time)
+        dplyr::group_by(ind) |>
+        dplyr::reframe(time = unique(time)) |>
+        dplyr::arrange(ind, time)
       
       obs_time_list <- split(df_data_time$time, f = df_data_time$ind)
       private$obs_time_list <- obs_time_list
@@ -241,12 +241,14 @@ glam_mcmc <- R6::R6Class(
         private$rng_list[[chain]]$sync()
         
         # update counters
-        #private$iteration_counter[[chain]][["burn"]] <- private$iteration_counter[[chain]][["burn"]] + iterations
-        #private$acceptance_counter[[chain]][["burn"]] <- private$acceptance_counter[[chain]][["burn"]] + output_raw$acceptance_out
-        #private$swap_acceptance_counter[[chain]][["burn"]] <- private$swap_acceptance_counter[[chain]][["burn"]] + output_raw$swap_acceptance_out
+        private$iteration_counter[[chain]][["burn"]] <- private$iteration_counter[[chain]][["burn"]] + iterations
+        private$acceptance_counter[[chain]][["burn"]] <- private$acceptance_counter[[chain]][["burn"]] + output_raw$acceptance_out
+        private$swap_acceptance_counter[[chain]][["burn"]] <- private$swap_acceptance_counter[[chain]][["burn"]] + output_raw$swap_acceptance_out
+        private$duration[[chain]][["burn"]] <- private$duration[[chain]][["burn"]] + output_raw$dur
         
       } # end loop over chains
       
+      #print(private$duration)
       #print(private$iteration_counter)
       #print(private$acceptance_counter)
       #print(private$swap_acceptance_counter)
@@ -258,7 +260,8 @@ glam_mcmc <- R6::R6Class(
     #' @description
     #' Print MCMC object summary
     print = function() {
-      message("GLAM MCMC object")
+      message("Data")
+      message("--------")
       
       # print summary of data
       message(sprintf("%s samples", private$n_samp))
@@ -268,6 +271,12 @@ glam_mcmc <- R6::R6Class(
       } else {
         message("variable observation times between samples")
       }
+      message("")
+      
+      message("MCMC")
+      message("--------")
+      
+      message(sprintf("Tuning: %s iterations", 0))
       
       # return invisibly
       invisible(self)

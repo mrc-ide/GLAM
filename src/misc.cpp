@@ -356,8 +356,8 @@ void cpp11_init(cpp11::writable::integers &x, int y) {
   }
 }
 void cpp11_init(cpp11::writable::integers_matrix<> &x, int y) {
-  for (int i = 0; i < x.size(); ++i) {
-    for (int j = 0; j < x[i].size(); ++j) {
+  for (int i = 0; i < x.nrow(); ++i) {
+    for (int j = 0; j < x.ncol(); ++j) {
       x(i,j) = y;
     }
   }
