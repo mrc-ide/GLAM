@@ -1,17 +1,18 @@
 
 #include <cpp11.hpp>
-#include <dust/r/random.hpp>
-#include <dust/random/normal.hpp>
+#include "MCMC.h"
 #include "misc.h"
 
 using namespace cpp11;
 namespace writable = cpp11::writable;
 
+//------------------------------------------------
 [[cpp11::register]]
 list mcmc_cpp(const int iterations,
               const bool burnin,
-              const int iteration_counter_init,
+              list param_list,
               list proposal_sd,
+              const int iteration_counter_init,
               const doubles beta,
               cpp11::sexp rng_ptr) {
   
@@ -20,49 +21,21 @@ list mcmc_cpp(const int iterations,
   // start timer
   std::chrono::high_resolution_clock::time_point t0 =  std::chrono::high_resolution_clock::now();
   
-  // extract proposal sd
-  std::vector<std::vector<double>> proposal_sd_array = list_to_mat_double(proposal_sd);
-  int n_proposal_sd = proposal_sd_array[0].size();
+  // initialise MCMC
+  MCMC mcmc(param_list,
+            proposal_sd,
+            iteration_counter_init,
+            beta,
+            rng_ptr);
   
-  const int n_rung = beta.size();
+  // run main loop
+  mcmc.run_mcmc(true, 100);
   
-  // dust initialise RNG
-  auto rng = dust::random::r::rng_pointer_get<dust::random::xoshiro256plus>(rng_ptr);
-  auto& state = rng->state(0);
-  
-  // counters
-  int iteration_counter = iteration_counter_init + 1;
-  writable::integers_matrix<> acceptance_out(n_rung, n_proposal_sd);
-  cpp11_init(acceptance_out, 0);
-  writable::integers swap_acceptance_out(n_rung - 1);
-  cpp11_init(swap_acceptance_out, 0);
-  
-  // dummy MCMC
-  int start_i = 0;
-  if (burnin && iteration_counter_init == 0) {
-    start_i = 1;
-    iteration_counter++;
+  // get output objects into cpp11 format
+  writable::list acceptance_out;
+  for (int i = 0; i < mcmc.acceptance_out.size(); ++i) {
+    acceptance_out.push_back({""_nm = mcmc.acceptance_out[i]});
   }
-  for (int i = start_i; i < iterations; ++i) {
-    
-    // mock updates
-    for (int r = 0; r < n_rung; ++r) {
-      for (int j = 0; j < n_proposal_sd; ++j) {
-        double rand1 = dust::random::random_real<double>(state);
-        if (rand1 < 0.5) {
-          acceptance_out(r,j)++;
-        }
-      }
-    }
-    
-    // mock Metropolis coupling
-    for (int r = 0; r < (n_rung - 1); ++r) {
-      swap_acceptance_out[r]++;
-    }
-    
-    iteration_counter++;
-    
-  }  // close main MCMC loop
   
   // calculate elapsed time
   std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
@@ -72,7 +45,7 @@ list mcmc_cpp(const int iterations,
   // return outputs in a list
   return writable::list({
     "acceptance_out"_nm = acceptance_out,
-    "swap_acceptance_out"_nm = swap_acceptance_out,
+    "swap_acceptance_out"_nm = mcmc.swap_acceptance_out,
     "dur"_nm = dur,
     "rng_ptr"_nm = rng_ptr
   });

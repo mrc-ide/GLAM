@@ -231,8 +231,9 @@ glam_mcmc <- R6::R6Class(
         # run this chain
         output_raw <- mcmc_cpp(iterations,                                        # iterations
                                TRUE,                                              # burnin
-                               private$iteration_counter[[chain]][["burn"]],      # iteration_counter_init
+                               private$param_list[[chain]],                       # params
                                private$proposal_sd[[chain]],                      # proposal_sd
+                               private$iteration_counter[[chain]][["burn"]],      # iteration_counter_init
                                rep(1, private$rungs),                             # beta
                                private$rng_list[[chain]]                          # rng_ptr
         )
@@ -240,9 +241,12 @@ glam_mcmc <- R6::R6Class(
         # sync RNG
         private$rng_list[[chain]]$sync()
         
+        # convert objects
+        acceptance_out <- matrix(unlist(output_raw$acceptance_out), nrow = length(output_raw$acceptance_out), byrow = TRUE)
+        
         # update counters
         private$iteration_counter[[chain]][["burn"]] <- private$iteration_counter[[chain]][["burn"]] + iterations
-        private$acceptance_counter[[chain]][["burn"]] <- private$acceptance_counter[[chain]][["burn"]] + output_raw$acceptance_out
+        private$acceptance_counter[[chain]][["burn"]] <- private$acceptance_counter[[chain]][["burn"]] + acceptance_out
         private$swap_acceptance_counter[[chain]][["burn"]] <- private$swap_acceptance_counter[[chain]][["burn"]] + output_raw$swap_acceptance_out
         private$duration[[chain]][["burn"]] <- private$duration[[chain]][["burn"]] + output_raw$dur
         
