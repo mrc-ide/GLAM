@@ -2,6 +2,7 @@
 #pragma once
 
 #include <cpp11.hpp>
+#include "Particle.h"
 #include "misc.h"
 
 //------------------------------------------------
@@ -14,6 +15,8 @@ public:
   // parameter values
   
   int n_rungs;
+  
+  std::vector<Particle> particle_vec;
   
   // proposal sd
   std::vector<std::vector<double>> proposal_sd_mat;

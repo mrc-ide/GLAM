@@ -222,6 +222,8 @@ glam_mcmc <- R6::R6Class(
         stop("Cannot run burnin after sampling called")
       }
       
+      print(private$param_list[[1]])
+      
       # loop over chains
       chains <- private$chains
       for (chain in 1:chains) {
