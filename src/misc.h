@@ -275,3 +275,17 @@ std::vector<std::vector<double>> inverse(std::vector<std::vector<double>> M);
 // values in x_pred must be inside (or equal to) x.
 void cubic_spline(std::vector<double> &x, std::vector<double> &y,
                   std::vector<double> &x_pred, std::vector<double> &y_pred);
+
+
+//------------------------------------------------
+// return array from cpp11 list of doubles
+std::vector<std::vector<std::vector<double>>> list_to_array_double(cpp11::list x);
+
+//------------------------------------------------
+// return matrix (vector of vectors) from cpp11 list
+std::vector<std::vector<double>> list_to_mat_double(cpp11::list x);
+
+//------------------------------------------------
+// initialise a cpp11 object with a fixed value
+void cpp11_init(cpp11::writable::integers &x, int y);
+void cpp11_init(cpp11::writable::integers_matrix<> &x, int y);

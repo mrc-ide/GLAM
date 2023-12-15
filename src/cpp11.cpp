@@ -6,16 +6,16 @@
 #include <R_ext/Visibility.h>
 
 // main.cpp
-list mcmc_cpp(cpp11::sexp rng_ptr);
-extern "C" SEXP _GLAM_mcmc_cpp(SEXP rng_ptr) {
+list mcmc_cpp(const int iterations, const bool burnin, const int iteration_counter_init, list proposal_sd, const doubles beta, cpp11::sexp rng_ptr);
+extern "C" SEXP _GLAM_mcmc_cpp(SEXP iterations, SEXP burnin, SEXP iteration_counter_init, SEXP proposal_sd, SEXP beta, SEXP rng_ptr) {
   BEGIN_CPP11
-    return cpp11::as_sexp(mcmc_cpp(cpp11::as_cpp<cpp11::decay_t<cpp11::sexp>>(rng_ptr)));
+    return cpp11::as_sexp(mcmc_cpp(cpp11::as_cpp<cpp11::decay_t<const int>>(iterations), cpp11::as_cpp<cpp11::decay_t<const bool>>(burnin), cpp11::as_cpp<cpp11::decay_t<const int>>(iteration_counter_init), cpp11::as_cpp<cpp11::decay_t<list>>(proposal_sd), cpp11::as_cpp<cpp11::decay_t<const doubles>>(beta), cpp11::as_cpp<cpp11::decay_t<cpp11::sexp>>(rng_ptr)));
   END_CPP11
 }
 
 extern "C" {
 static const R_CallMethodDef CallEntries[] = {
-    {"_GLAM_mcmc_cpp", (DL_FUNC) &_GLAM_mcmc_cpp, 1},
+    {"_GLAM_mcmc_cpp", (DL_FUNC) &_GLAM_mcmc_cpp, 6},
     {NULL, NULL, 0}
 };
 }

@@ -30,7 +30,9 @@ glam_mcmc <- R6::R6Class(
     max_infections = NULL,
     param_list = NULL,
     proposal_sd = NULL,
+    n_proposal_sd = NULL,
     rng_list = NULL,
+    iteration_counter = NULL,
     acceptance_counter = NULL,
     swap_acceptance_counter = NULL,
     duration = NULL,
@@ -150,6 +152,7 @@ glam_mcmc <- R6::R6Class(
       
       # initialise proposal standard deviations for all parameters
       proposal_sd <- list()
+      n_proposal_sd <- 5
       for (i in 1:chains) {
         proposal_sd[[i]] <- list()
         for (j in 1:rungs) {
@@ -165,9 +168,16 @@ glam_mcmc <- R6::R6Class(
       rng_list <- dust::dust_rng_distributed_pointer(n_nodes = chains)
       
       # initialise counters
-      acceptance_counter <- list(tune = 0, burn = 0, sample = 0)
-      swap_acceptance_counter <- list(tune = 0, burn = 0, sample = 0)
-      duration <- list(tune = 0, burn = 0, sample = 0)
+      iteration_counter <- create_chain_phase_list(chains = chains, base = 0)
+      duration <- create_chain_phase_list(chains = chains, base = 0)
+      acceptance_counter <- create_chain_phase_list(chains = chains,
+                                                    base = matrix(
+                                                      data = 0,
+                                                      nrow = rungs, 
+                                                      ncol = n_proposal_sd
+                                                    ))
+      swap_acceptance_counter <- create_chain_phase_list(chains = chains,
+                                                    base = rep(0, rungs - 1))
       
       # overwrite haplo_freqs if defined manually
       if (!is.null(haplo_freqs)) {
@@ -180,7 +190,9 @@ glam_mcmc <- R6::R6Class(
       private$max_infections <- max_infections
       private$param_list <- param_list
       private$proposal_sd <- proposal_sd
+      private$n_proposal_sd <- n_proposal_sd
       private$rng_list <- rng_list
+      private$iteration_counter <- iteration_counter
       private$acceptance_counter <- acceptance_counter
       private$swap_acceptance_counter <- swap_acceptance_counter
       private$duration <- duration
@@ -210,13 +222,34 @@ glam_mcmc <- R6::R6Class(
         stop("Cannot run burnin after sampling called")
       }
       
-      # run MCMC chain
-      output_raw <- mcmc_cpp(private$rng_list[[1]])
+      # loop over chains
+      chains <- private$chains
+      for (chain in 1:chains) {
+        
+        message(sprintf("Running chain %s", chain))
+        
+        # run this chain
+        output_raw <- mcmc_cpp(iterations,                                        # iterations
+                               TRUE,                                              # burnin
+                               private$iteration_counter[[chain]][["burn"]],      # iteration_counter_init
+                               private$proposal_sd[[chain]],                      # proposal_sd
+                               rep(1, private$rungs),                             # beta
+                               private$rng_list[[chain]]                          # rng_ptr
+        )
+        
+        # sync RNG
+        private$rng_list[[chain]]$sync()
+        
+        # update counters
+        #private$iteration_counter[[chain]][["burn"]] <- private$iteration_counter[[chain]][["burn"]] + iterations
+        #private$acceptance_counter[[chain]][["burn"]] <- private$acceptance_counter[[chain]][["burn"]] + output_raw$acceptance_out
+        #private$swap_acceptance_counter[[chain]][["burn"]] <- private$swap_acceptance_counter[[chain]][["burn"]] + output_raw$swap_acceptance_out
+        
+      } # end loop over chains
       
-      # sync RNG
-      private$rng_list[[1]]$sync()
-      
-      
+      #print(private$iteration_counter)
+      #print(private$acceptance_counter)
+      #print(private$swap_acceptance_counter)
     },
     
     #--------------------

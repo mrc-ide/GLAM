@@ -312,3 +312,53 @@ void cubic_spline(vector<double> &x, vector<double> &y,
   
   return;
 }
+
+//------------------------------------------------
+// return array from cpp11 list
+std::vector<std::vector<std::vector<double>>> list_to_array_double(cpp11::list x) {
+  std::vector<std::vector<std::vector<double>>> ret1(x.size());
+  for (int i = 0; i < x.size(); i++) {
+    cpp11::list xi = x[i];
+    std::vector<std::vector<double>> ret2(xi.size());
+    for (int j = 0; j < xi.size(); j++) {
+      cpp11::list xij = xi[j];
+      std::vector<double> ret3(xij.size());
+      for (int k = 0; k < xij.size(); k++) {
+        ret3[k] = cpp11::as_cpp<double>(xij[k]);
+      }
+      ret2[j] = ret3;
+    }
+    ret1[i] = ret2;
+  }
+  return ret1;
+}
+
+//------------------------------------------------
+// return matrix (vector of vectors) from cpp11 list
+std::vector<std::vector<double>> list_to_mat_double(cpp11::list x) {
+  std::vector<std::vector<double>> ret1(x.size());
+  for (int i = 0; i < x.size(); i++) {
+    cpp11::list xi = x[i];
+    std::vector<double> ret2(xi.size());
+    for (int j = 0; j < xi.size(); j++) {
+      ret2[j] = cpp11::as_cpp<double>(xi[j]);
+    }
+    ret1[i] = ret2;
+  }
+  return ret1;
+}
+
+//------------------------------------------------
+// initialise a cpp11 object with a fixed value
+void cpp11_init(cpp11::writable::integers &x, int y) {
+  for (int i = 0; i < x.size(); ++i) {
+    x[i] = y;
+  }
+}
+void cpp11_init(cpp11::writable::integers_matrix<> &x, int y) {
+  for (int i = 0; i < x.size(); ++i) {
+    for (int j = 0; j < x[i].size(); ++j) {
+      x(i,j) = y;
+    }
+  }
+}
