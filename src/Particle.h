@@ -20,19 +20,21 @@ public:
   std::vector<int> n_infections;
   int n_samp;
   std::vector<std::vector<double>> infection_times;
+  double start_time;
+  double end_time;
   
   // proposal sd
   std::vector<double> proposal_sd_vec;
   int n_proposal_sd;
   
   // RNG
-  cpp11::sexp rng_ptr;
+  dust::random::xoshiro256plus& rng_state;
   
   
   // PUBLIC FUNCTIONS
   
   // constructors
-  Particle() {};
+  Particle(dust::random::xoshiro256plus& rng_state) : rng_state(rng_state) {};
   
   // member functions
   void init(double lambda,

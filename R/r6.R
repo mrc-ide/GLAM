@@ -320,7 +320,10 @@ glam_mcmc <- R6::R6Class(
                            silent = silent)
     },
     
-    #' @noRd
+    #' @param burnin TODO
+    #' @param iterations TODO
+    #' @param target_acceptance TODO
+    #' @param silent TODO
     run_burn_sample = function(burnin, iterations, target_acceptance = 0.44, silent = FALSE) {
       
       # check inputs
@@ -382,7 +385,6 @@ glam_mcmc <- R6::R6Class(
       
     },
     
-    #' @noRd
     get_output_global = function() {
       
       ret <- mapply(function(i) {
@@ -407,7 +409,6 @@ glam_mcmc <- R6::R6Class(
       return(ret)
     },
     
-    #' @noRd
     get_output_n_infections = function() {
       
       ret <- mapply(function(i) {
@@ -431,7 +432,6 @@ glam_mcmc <- R6::R6Class(
       return(ret)
     },
     
-    #' @noRd
     get_output_infection_times = function() {
       
       seq_len_V <- Vectorize(function(n) seq_len(n), SIMPLIFY = FALSE)

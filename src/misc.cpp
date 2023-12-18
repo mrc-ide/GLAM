@@ -316,48 +316,88 @@ void cubic_spline(vector<double> &x, vector<double> &y,
 //------------------------------------------------
 // return array from cpp11 list
 std::vector<std::vector<std::vector<double>>> list_to_array_double(cpp11::list x) {
-  std::vector<std::vector<std::vector<double>>> ret1(x.size());
+  std::vector<std::vector<std::vector<double>>> ret(x.size());
   for (int i = 0; i < x.size(); i++) {
     cpp11::list xi = x[i];
-    std::vector<std::vector<double>> ret2(xi.size());
+    std::vector<std::vector<double>> m(xi.size());
     for (int j = 0; j < xi.size(); j++) {
       cpp11::list xij = xi[j];
-      std::vector<double> ret3(xij.size());
+      std::vector<double> v(xij.size());
       for (int k = 0; k < xij.size(); k++) {
-        ret3[k] = cpp11::as_cpp<double>(xij[k]);
+        v[k] = cpp11::as_cpp<double>(xij[k]);
       }
-      ret2[j] = ret3;
+      m[j] = v;
     }
-    ret1[i] = ret2;
+    ret[i] = m;
   }
-  return ret1;
+  return ret;
+}
+cpp11::writable::list array_double_to_list(std::vector<std::vector<std::vector<double>>> &x) {
+  cpp11::writable::list ret;
+  for (int i = 0; i < x.size(); ++i) {
+    cpp11::writable::list tmp;
+    for (int j = 0; j < x[i].size(); ++j) {
+      cpp11::doubles tmp2 = cpp11::as_sexp(x[i][j]);
+      tmp.push_back(tmp2);
+    }
+    ret.push_back(tmp);
+  }
+  return ret;
+}
+cpp11::writable::list array_int_to_list(std::vector<std::vector<std::vector<int>>> &x) {
+  cpp11::writable::list ret;
+  for (int i = 0; i < x.size(); ++i) {
+    cpp11::writable::list tmp;
+    for (int j = 0; j < x[i].size(); ++j) {
+      cpp11::integers tmp2 = cpp11::as_sexp(x[i][j]);
+      tmp.push_back(tmp2);
+    }
+    ret.push_back(tmp);
+  }
+  return ret;
 }
 
 //------------------------------------------------
 // convert between matrix (vector of vectors) and cpp11 list
 std::vector<std::vector<double>> list_to_mat_double(cpp11::list x) {
-  std::vector<std::vector<double>> ret1(x.size());
+  std::vector<std::vector<double>> ret(x.size());
   for (int i = 0; i < x.size(); i++) {
     cpp11::list xi = x[i];
-    std::vector<double> ret2(xi.size());
+    std::vector<double> v(xi.size());
     for (int j = 0; j < xi.size(); j++) {
-      ret2[j] = cpp11::as_cpp<double>(xi[j]);
+      v[j] = cpp11::as_cpp<double>(xi[j]);
     }
-    ret1[i] = ret2;
+    ret[i] = v;
   }
-  return ret1;
+  return ret;
 }
 std::vector<std::vector<int>> list_to_mat_int(cpp11::list x) {
-  std::vector<std::vector<int>> ret1(x.size());
+  std::vector<std::vector<int>> ret(x.size());
   for (int i = 0; i < x.size(); i++) {
     cpp11::list xi = x[i];
-    std::vector<int> ret2(xi.size());
+    std::vector<int> v(xi.size());
     for (int j = 0; j < xi.size(); j++) {
-      ret2[j] = cpp11::as_cpp<int>(xi[j]);
+      v[j] = cpp11::as_cpp<int>(xi[j]);
     }
-    ret1[i] = ret2;
+    ret[i] = v;
   }
-  return ret1;
+  return ret;
+}
+cpp11::writable::list mat_double_to_list(std::vector<std::vector<double>> &x) {
+  cpp11::writable::list ret;
+  for (int i = 0; i < x.size(); ++i) {
+    cpp11::doubles v = cpp11::as_sexp(x[i]);
+    ret.push_back(v);
+  }
+  return ret;
+}
+cpp11::writable::list mat_int_to_list(std::vector<std::vector<int>> &x) {
+  cpp11::writable::list ret;
+  for (int i = 0; i < x.size(); ++i) {
+    cpp11::integers v = cpp11::as_sexp(x[i]);
+    ret.push_back(v);
+  }
+  return ret;
 }
 
 //------------------------------------------------

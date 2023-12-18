@@ -34,9 +34,9 @@ list mcmc_cpp(const int iterations,
   mcmc.run_mcmc(true, iterations);
   
   // get output objects into cpp11 format
-  writable::list acceptance_out = mat_to_list(mcmc.acceptance_out);
-  writable::list n_infections = mat_to_list(mcmc.n_infections_store);
-  writable::list infection_times = array_to_list(mcmc.infection_times_store);
+  writable::list acceptance_out = mat_int_to_list(mcmc.acceptance_out);
+  writable::list n_infections = mat_int_to_list(mcmc.n_infections_store);
+  writable::list infection_times = array_double_to_list(mcmc.infection_times_store);
   
   // calculate elapsed time
   std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();

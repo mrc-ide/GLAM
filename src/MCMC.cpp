@@ -19,6 +19,9 @@ MCMC::MCMC(cpp11::list param_list,
            const double end_time,
            cpp11::sexp rng_ptr) {
   
+  auto rng = dust::random::r::rng_pointer_get<dust::random::xoshiro256plus>(rng_ptr);
+  auto& state = rng->state(0);
+  
   n_rungs = beta.size();
   
   // extract proposal sd
@@ -26,7 +29,7 @@ MCMC::MCMC(cpp11::list param_list,
   n_proposal_sd = proposal_sd_mat[0].size();
   
   // initialise particles
-  particle_vec = std::vector<Particle>(n_rungs);
+  particle_vec = std::vector<Particle>(n_rungs, Particle(state));
   for (int r = 0; r < n_rungs; ++r) {
     
     // extract parameters
@@ -104,7 +107,7 @@ void MCMC::run_mcmc(bool burnin, int iterations) {
   
   // run loop
   for (int i = start_i; i < iterations; ++i) {
-    /*
+    
     int remainder = i % int(ceil(double(iterations) / 100));
     if ((remainder == 0) || ((i + 1) == iterations)) {
       progress.tick();
@@ -119,7 +122,7 @@ void MCMC::run_mcmc(bool burnin, int iterations) {
     for (int r = 0; r < (n_rungs - 1); ++r) {
       swap_acceptance_out[r]++;
     }
-    */
+    
     // store results
     lambda_store[i] = particle_vec[0].lambda;
     theta_store[i] = particle_vec[0].theta;
