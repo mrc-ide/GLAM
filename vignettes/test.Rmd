@@ -1,0 +1,47 @@
+---
+title: "test"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{test}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(GLAM)
+```
+
+```{r}
+samp_time <- seq(0, 10, 1)
+haplo_freqs <- rep(0.1, 10)
+lambda <- 0.2
+theta <- 0.5
+decay_rate <- 0.1
+sens <- 0.9
+
+n_infections_true <- 1:5
+
+sim2 <- sim_cohort(n = 5,
+                   samp_time = samp_time,
+                   haplo_freqs = haplo_freqs,
+                   lambda = lambda,
+                   theta = theta,
+                   decay_rate = decay_rate,
+                   sens = sens,
+                   n_inf = n_infections_true,
+                   return_full = TRUE)
+
+g <- glam_mcmc$new(df_data = sim2$df_data)
+
+g$init(start_time = 0, end_time = 10, chains = 2,
+       n_infections = n_infections_true, max_infections = 10)
+
+g$burn(iterations = 1e2)
+```

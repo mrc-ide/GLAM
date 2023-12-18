@@ -37,6 +37,18 @@ glam_mcmc <- R6::R6Class(
     swap_acceptance_counter = NULL,
     duration = NULL,
     
+    # misc parameters
+    start_time = NULL,
+    end_time = NULL,
+    
+    # parameter draws
+    lambda_store = NULL,
+    theta_store = NULL,
+    decay_rate_store = NULL,
+    sens_store = NULL,
+    n_infections_store = NULL,
+    infection_times_store = NULL,
+    
     ### Private functions ###
     private_func = function(x) {
       print(x)
@@ -46,9 +58,7 @@ glam_mcmc <- R6::R6Class(
   public = list(
     
     ### Public variables ###
-    
-    #' @field example_public_var example.
-    example_public_var = NULL,
+    # (none)
     
     ### Public functions ###
     
@@ -104,27 +114,68 @@ glam_mcmc <- R6::R6Class(
     #' @description
     #' Define model parameters.
     #' 
+    #' @param start_time TODO
+    #' @param end_time TODO
     #' @param chains the number of independent chains.
     #' @param rungs TODO
+    #' @param max_infections TODO
     #' @param lambda TODO
     #' @param theta TODO
     #' @param decay_rate TODO
     #' @param sens TODO
     #' @param n_infections TODO
     #' @param haplo_freqs TODO
-    #' @param max_infections TODO
-    params = function(chains = 5,
-                      rungs = 1,
-                      lambda = NULL,
-                      theta = NULL,
-                      decay_rate = NULL,
-                      sens = NULL,
-                      n_infections = NULL,
-                      haplo_freqs = NULL,
-                      max_infections = 5) {
+    init = function(start_time,
+                    end_time,
+                    chains = 5,
+                    rungs = 1,
+                    max_infections = 5,
+                    lambda = NULL,
+                    theta = NULL,
+                    decay_rate = NULL,
+                    sens = NULL,
+                    n_infections = NULL,
+                    haplo_freqs = NULL
+                    ) {
       
-      # input checks
+      # check inputs
+      assert_single_pos(start_time)
+      assert_single_pos(end_time)
+      assert_gr(end_time, start_time)
       assert_single_pos_int(chains, zero_allowed = FALSE)
+      assert_single_pos_int(rungs, zero_allowed = FALSE)
+      assert_single_pos_int(max_infections, zero_allowed = FALSE)
+      if (!is.null(lambda)) {
+        assert_single_pos(lambda, zero_allowed = TRUE)
+      }
+      if (!is.null(theta)) {
+        assert_single_pos(theta, zero_allowed = FALSE)
+      }
+      if (!is.null(decay_rate)) {
+        assert_single_pos(decay_rate, zero_allowed = TRUE)
+      }
+      if (!is.null(sens)) {
+        assert_single_bounded(sens)
+      }
+      if (!is.null(n_infections)) {
+        assert_vector_int(n_infections)
+        assert_length(n_infections, private$n_samp)
+        assert_bounded(n_infections, left = 0, right = max_infections)
+      }
+      if (!is.null(haplo_freqs)) {
+        assert_vector_bounded(haplo_freqs)
+        assert_length(n_infections, private$n_haplos)
+        assert_eq(sum(haplo_freqs), 1)
+      }
+      
+      # check that parameters are compatible with data
+      obs_time_range <- range(unlist(private$obs_time_list))
+      if (start_time > obs_time_range[1]) {
+        stop(sprintf("start_time must be less than or equal to the first observation time (%s)", obs_time_range[1]))
+      }
+      if (end_time < obs_time_range[2]) {
+        stop(sprintf("end_time must be greater than or equal to the last observation time (%s)", obs_time_range[2]))
+      }
       
       # which parameters need updating
       lambda_fixed <- !is.null(lambda)
@@ -138,15 +189,23 @@ glam_mcmc <- R6::R6Class(
       for (i in 1:chains) {
         param_list[[i]] <- list()
         for (j in 1:rungs) {
-          param_list[[i]][[j]] <- list(
-            lambda = ifelse(lambda_fixed, lambda, runif(1)),
-            theta = ifelse(theta_fixed, theta, runif(1)),
-            decay_rate = ifelse(decay_rate_fixed, decay_rate, runif(1)),
-            sens = ifelse(sens_fixed, sens, runif(1))
-            )
-          if (!n_infections_fixed) {
-            param_list[[i]][[j]]$n_infections <- sample(max_infections, private$n_samp, replace = TRUE)
+          lambda <- ifelse(lambda_fixed, lambda, runif(1))
+          theta <- ifelse(theta_fixed, theta, runif(1))
+          decay_rate <- ifelse(decay_rate_fixed, decay_rate, runif(1))
+          sens <- ifelse(sens_fixed, sens, runif(1))
+          if (n_infections_fixed) {
+            n_infections <- as.integer(n_infections)
+          } else {
+            n_infections <- sample(max_infections, private$n_samp, replace = TRUE)
           }
+          
+          param_list[[i]][[j]] <- list(
+            lambda = lambda,
+            theta = theta,
+            decay_rate = decay_rate,
+            sens = sens,
+            n_infections = n_infections
+            )
         }
       }
       
@@ -164,6 +223,14 @@ glam_mcmc <- R6::R6Class(
         }
       }
       
+      # initialise objects for storing results
+      private$lambda_store <- replicate(chains, NULL)
+      private$theta_store <- replicate(chains, NULL)
+      private$decay_rate_store <- replicate(chains, NULL)
+      private$sens_store <- replicate(chains, NULL)
+      private$n_infections_store <- replicate(chains, NULL)
+      private$infection_times_store <- replicate(chains, NULL)
+      
       # initialise random number pointer for each chain
       rng_list <- dust::dust_rng_distributed_pointer(n_nodes = chains)
       
@@ -179,12 +246,15 @@ glam_mcmc <- R6::R6Class(
       swap_acceptance_counter <- create_chain_phase_list(chains = chains,
                                                     base = rep(0, rungs - 1))
       
-      # overwrite haplo_freqs if defined manually
+      # haplo_freqs have already been calculated when loading data, but
+      # overwrite if defined manually here
       if (!is.null(haplo_freqs)) {
         private$haplo_freqs <- haplo_freqs
       }
       
       # store values
+      private$start_time <- start_time
+      private$end_time <- end_time
       private$chains <- chains
       private$rungs <- rungs
       private$max_infections <- max_infections
@@ -204,7 +274,7 @@ glam_mcmc <- R6::R6Class(
     #' @description
     #' Run burn-in MCMC
     #' 
-    #' @param iterations number of burn-in iterations
+    #' @param iterations number of burn-in iterations.
     #' @param target_acceptance all Metropolis-Hastings proposals will be
     #'   adaptively tuned to aim for this acceptance rate.
     #' @param silent if \code{TRUE} then suppress all console output. Default =
@@ -217,47 +287,181 @@ glam_mcmc <- R6::R6Class(
       assert_single_bounded(target_acceptance, inclusive_left = FALSE, inclusive_right = FALSE)
       assert_single_logical(silent)
       
-      # cannot run burnin after sampling
-      if (private$sample_called) {
-        stop("Cannot run burnin after sampling called")
-      }
+      # run main loop
+      self$run_burn_sample(burnin = TRUE,
+                           iterations = iterations,
+                           target_acceptance = target_acceptance,
+                           silent = silent)
+    },
+    
+    #--------------------
+    ## Run sampling MCMC
+    
+    #' @description
+    #' Run sampling MCMC
+    #' 
+    #' @param iterations number of sampling iterations.
+    #' @param silent if \code{TRUE} then suppress all console output. Default =
+    #'   \code{FALSE}.
+    sample = function(iterations, silent = FALSE) {
       
-      print(private$param_list[[1]])
+      # check inputs
+      assert_single_pos_int(iterations)
+      assert_greq(iterations, 10)
+      assert_single_logical(silent)
+      
+      # cannot go back to burnin
+      private$sample_called <- TRUE
+      
+      # run main loop
+      self$run_burn_sample(burnin = FALSE,
+                           iterations = iterations,
+                           target_acceptance = 0.1,
+                           silent = silent)
+    },
+    
+    #' @noRd
+    run_burn_sample = function(burnin, iterations, target_acceptance = 0.44, silent = FALSE) {
+      
+      # check inputs
+      assert_single_logical(burnin)
+      assert_single_pos_int(iterations)
+      assert_greq(iterations, 10)
+      assert_single_bounded(target_acceptance, inclusive_left = FALSE, inclusive_right = FALSE)
+      assert_single_logical(silent)
+      
+      phase_name <- ifelse(burnin, "burn", "sample")
+      
+      # cannot run burnin after sampling
+      if (burnin && private$sample_called) {
+        stop("Cannot run burn() after sample() called")
+      }
       
       # loop over chains
       chains <- private$chains
       for (chain in 1:chains) {
         
-        message(sprintf("Running chain %s", chain))
+        #message(sprintf("\nRunning chain %s", chain))
         
         # run this chain
         output_raw <- mcmc_cpp(iterations,                                        # iterations
-                               TRUE,                                              # burnin
+                               burnin,                                            # burnin
                                private$param_list[[chain]],                       # params
                                private$proposal_sd[[chain]],                      # proposal_sd
-                               private$iteration_counter[[chain]][["burn"]],      # iteration_counter_init
+                               private$iteration_counter[[chain]][[phase_name]],  # iteration_counter_init
                                rep(1, private$rungs),                             # beta
+                               private$start_time,                                # start_time
+                               private$end_time,                                  # end_time
                                private$rng_list[[chain]]                          # rng_ptr
         )
         
         # sync RNG
         private$rng_list[[chain]]$sync()
         
-        # convert objects
+        #return(output_raw)
+        
+        # convert raw output objects if needed
         acceptance_out <- matrix(unlist(output_raw$acceptance_out), nrow = length(output_raw$acceptance_out), byrow = TRUE)
+        n_infections <- matrix(unlist(output_raw$n_infections), nrow = length(output_raw$n_infections), byrow = TRUE)
+        
+        # append parameter draws
+        private$lambda_store[[chain]] <- c(private$lambda_store[[chain]], output_raw$lambda)
+        private$theta_store[[chain]] <- c(private$theta_store[[chain]], output_raw$theta)
+        private$decay_rate_store[[chain]] <- c(private$decay_rate_store[[chain]], output_raw$decay_rate)
+        private$sens_store[[chain]] <- c(private$sens_store[[chain]], output_raw$sens)
+        private$n_infections_store[[chain]] <- rbind(private$n_infections_store[[chain]], n_infections)
+        private$infection_times_store[[chain]] <- c(private$infection_times_store[[chain]], output_raw$infection_times)
         
         # update counters
-        private$iteration_counter[[chain]][["burn"]] <- private$iteration_counter[[chain]][["burn"]] + iterations
-        private$acceptance_counter[[chain]][["burn"]] <- private$acceptance_counter[[chain]][["burn"]] + acceptance_out
-        private$swap_acceptance_counter[[chain]][["burn"]] <- private$swap_acceptance_counter[[chain]][["burn"]] + output_raw$swap_acceptance_out
-        private$duration[[chain]][["burn"]] <- private$duration[[chain]][["burn"]] + output_raw$dur
+        private$iteration_counter[[chain]][[phase_name]] <- private$iteration_counter[[chain]][[phase_name]] + iterations
+        private$acceptance_counter[[chain]][[phase_name]] <- private$acceptance_counter[[chain]][[phase_name]] + acceptance_out
+        private$swap_acceptance_counter[[chain]][[phase_name]] <- private$swap_acceptance_counter[[chain]][[phase_name]] + output_raw$swap_acceptance_out
+        private$duration[[chain]][[phase_name]] <- private$duration[[chain]][[phase_name]] + output_raw$dur
         
       } # end loop over chains
       
-      #print(private$duration)
-      #print(private$iteration_counter)
-      #print(private$acceptance_counter)
-      #print(private$swap_acceptance_counter)
+    },
+    
+    #' @noRd
+    get_output_global = function() {
+      
+      ret <- mapply(function(i) {
+        iteration_counter <- unlist(private$iteration_counter[[i]][c("burn", "sample")])
+        
+        v_chain <- rep(i, sum(iteration_counter))
+        v_phase <- rep(c("burnin", "sampling"), times = iteration_counter)
+        v_iteration <- 1:sum(iteration_counter)
+        
+        data.frame(chain = v_chain,
+                   phase = v_phase,
+                   iteration = v_iteration,
+                   lambda = private$lambda_store[[i]],
+                   theta = private$theta_store[[i]],
+                   decay_rate = private$decay_rate_store[[i]],
+                   sens = private$sens_store[[i]])
+      }, seq_len(private$chains), SIMPLIFY = FALSE) |>
+        bind_rows() |>
+        mutate(phase = factor(phase, levels = c("burnin", "sampling")),
+               chain = factor(chain, levels = 1:private$chains))
+      
+      return(ret)
+    },
+    
+    #' @noRd
+    get_output_n_infections = function() {
+      
+      ret <- mapply(function(i) {
+        iteration_counter <- unlist(private$iteration_counter[[i]][c("burn", "sample")])
+        
+        v_chain <- rep(i, length(private$n_infections_store[[i]]))
+        v_phase <- rep(c("burnin", "sampling"), times = iteration_counter * private$n_samp)
+        v_iteration <- rep(1:sum(iteration_counter), each = private$n_samp)
+        v_ind <- rep(1:private$n_samp, times = sum(iteration_counter))
+        
+        data.frame(chain = v_chain,
+                   phase = v_phase,
+                   iteration = v_iteration,
+                   ind = v_ind,
+                   value = as.vector(t(private$n_infections_store[[i]])))
+      }, seq_len(private$chains), SIMPLIFY = FALSE) |>
+        bind_rows() |>
+        mutate(phase = factor(phase, levels = c("burnin", "sampling")),
+               chain = factor(chain, levels = 1:private$chains))
+      
+      return(ret)
+    },
+    
+    #' @noRd
+    get_output_infection_times = function() {
+      
+      seq_len_V <- Vectorize(function(n) seq_len(n), SIMPLIFY = FALSE)
+      
+      ret <- mapply(function(i) {
+        iteration_counter <- unlist(private$iteration_counter[[i]][c("burn", "sample")])
+        
+        n_infections <- as.vector(t(private$n_infections_store[[i]]))
+        
+        v_iter <- rep(1:sum(iteration_counter), times = rowSums(private$n_infections_store[[i]]))
+        v_phase <- ifelse(v_iter <= iteration_counter[1], "burnin", "sampling")
+        v_ind <- rep(rep(1:private$n_samp, times = sum(iteration_counter)), times = n_infections)
+        v_inf <- unlist(seq_len_V(n_infections))
+        
+        # sort by infection time before indexing infections
+        data.frame(chain = i,
+                   phase = v_phase,
+                   iteration = v_iter,
+                   individual = v_ind,
+                   value = unlist(private$infection_times_store[[i]])) |>
+          arrange(chain, phase, iteration, individual, value) |>
+          add_column(infection = v_inf, .after = "individual")
+        
+      }, seq_len(private$chains), SIMPLIFY = FALSE) |>
+        bind_rows() |>
+        mutate(phase = factor(phase, levels = c("burnin", "sampling")),
+               chain = factor(chain, levels = 1:private$chains),
+               infection = factor(infection, levels = 1:private$max_infections))
+      
+      return(ret)
     },
     
     #--------------------

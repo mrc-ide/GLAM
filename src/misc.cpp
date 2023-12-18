@@ -334,7 +334,7 @@ std::vector<std::vector<std::vector<double>>> list_to_array_double(cpp11::list x
 }
 
 //------------------------------------------------
-// return matrix (vector of vectors) from cpp11 list
+// convert between matrix (vector of vectors) and cpp11 list
 std::vector<std::vector<double>> list_to_mat_double(cpp11::list x) {
   std::vector<std::vector<double>> ret1(x.size());
   for (int i = 0; i < x.size(); i++) {
@@ -347,18 +347,25 @@ std::vector<std::vector<double>> list_to_mat_double(cpp11::list x) {
   }
   return ret1;
 }
+std::vector<std::vector<int>> list_to_mat_int(cpp11::list x) {
+  std::vector<std::vector<int>> ret1(x.size());
+  for (int i = 0; i < x.size(); i++) {
+    cpp11::list xi = x[i];
+    std::vector<int> ret2(xi.size());
+    for (int j = 0; j < xi.size(); j++) {
+      ret2[j] = cpp11::as_cpp<int>(xi[j]);
+    }
+    ret1[i] = ret2;
+  }
+  return ret1;
+}
 
 //------------------------------------------------
-// initialise a cpp11 object with a fixed value
-void cpp11_init(cpp11::writable::integers &x, int y) {
+// return std::vector from cpp11 vectors
+std::vector<int> integers_to_vec(cpp11::integers x) {
+  std::vector<int> ret(x.size());
   for (int i = 0; i < x.size(); ++i) {
-    x[i] = y;
+    ret[i] = x[i];
   }
-}
-void cpp11_init(cpp11::writable::integers_matrix<> &x, int y) {
-  for (int i = 0; i < x.nrow(); ++i) {
-    for (int j = 0; j < x.ncol(); ++j) {
-      x(i,j) = y;
-    }
-  }
+  return ret;
 }

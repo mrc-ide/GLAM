@@ -6,16 +6,16 @@
 #include <R_ext/Visibility.h>
 
 // main.cpp
-list mcmc_cpp(const int iterations, const bool burnin, list param_list, list proposal_sd, const int iteration_counter_init, const doubles beta, cpp11::sexp rng_ptr);
-extern "C" SEXP _GLAM_mcmc_cpp(SEXP iterations, SEXP burnin, SEXP param_list, SEXP proposal_sd, SEXP iteration_counter_init, SEXP beta, SEXP rng_ptr) {
+list mcmc_cpp(const int iterations, const bool burnin, list param_list, list proposal_sd, const int iteration_counter_init, const doubles beta, double start_time, double end_time, cpp11::sexp rng_ptr);
+extern "C" SEXP _GLAM_mcmc_cpp(SEXP iterations, SEXP burnin, SEXP param_list, SEXP proposal_sd, SEXP iteration_counter_init, SEXP beta, SEXP start_time, SEXP end_time, SEXP rng_ptr) {
   BEGIN_CPP11
-    return cpp11::as_sexp(mcmc_cpp(cpp11::as_cpp<cpp11::decay_t<const int>>(iterations), cpp11::as_cpp<cpp11::decay_t<const bool>>(burnin), cpp11::as_cpp<cpp11::decay_t<list>>(param_list), cpp11::as_cpp<cpp11::decay_t<list>>(proposal_sd), cpp11::as_cpp<cpp11::decay_t<const int>>(iteration_counter_init), cpp11::as_cpp<cpp11::decay_t<const doubles>>(beta), cpp11::as_cpp<cpp11::decay_t<cpp11::sexp>>(rng_ptr)));
+    return cpp11::as_sexp(mcmc_cpp(cpp11::as_cpp<cpp11::decay_t<const int>>(iterations), cpp11::as_cpp<cpp11::decay_t<const bool>>(burnin), cpp11::as_cpp<cpp11::decay_t<list>>(param_list), cpp11::as_cpp<cpp11::decay_t<list>>(proposal_sd), cpp11::as_cpp<cpp11::decay_t<const int>>(iteration_counter_init), cpp11::as_cpp<cpp11::decay_t<const doubles>>(beta), cpp11::as_cpp<cpp11::decay_t<double>>(start_time), cpp11::as_cpp<cpp11::decay_t<double>>(end_time), cpp11::as_cpp<cpp11::decay_t<cpp11::sexp>>(rng_ptr)));
   END_CPP11
 }
 
 extern "C" {
 static const R_CallMethodDef CallEntries[] = {
-    {"_GLAM_mcmc_cpp", (DL_FUNC) &_GLAM_mcmc_cpp, 7},
+    {"_GLAM_mcmc_cpp", (DL_FUNC) &_GLAM_mcmc_cpp, 9},
     {NULL, NULL, 0}
 };
 }

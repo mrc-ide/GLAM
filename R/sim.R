@@ -20,6 +20,8 @@
 #' @param decay_rate rate at which haplotypes clear.
 #' @param sens sensitivity of sequencing. Assumed the same for all haplotypes.
 #' @param ind_name the name given to this individual in the returned data.frame.
+#' @param n_inf if \code{NULL} then number of infections is drawn from the
+#'   model, but this parameter can also be used to manually set this value.
 #' @param return_full Boolean (Default \code{FALSE}). If \code{TRUE} then
 #'   return true values of hidden variables alongside observed data.
 #'
@@ -27,7 +29,7 @@
 #' @export
 
 sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
-                    ind_name = "ind1", return_full = FALSE) {
+                    ind_name = "ind1", n_inf = NULL, return_full = FALSE) {
   
   # check inputs
   assert_vector_numeric(samp_time)
@@ -41,6 +43,9 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
   assert_single_pos(decay_rate)
   assert_single_bounded(sens)
   assert_single_string(ind_name)
+  if (!is.null(n_inf)) {
+    assert_single_pos_int(n_inf)
+  }
   assert_single_logical(return_full)
   
   # get dimensions
@@ -61,7 +66,9 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
   
   # draw the number of infections that occur during the observation period and
   # the timings of these infections
-  n_inf <- rpois(1, lambda*t_period)
+  if (is.null(n_inf)) {
+    n_inf <- rpois(1, lambda*t_period)
+  }
   t_inf <- sort(runif(n_inf, start_time, end_time))
   
   # consider whether this individual initialises positive for each haplotype.
@@ -124,13 +131,13 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
   
   # apply initial conditions
   for (j in which(w_init == 1)) {
-    state_true[,j] <- (samp_time < clear_init[j])
+    state_true[,j] <- (samp_time <= clear_init[j])
   }
   
   # apply subsequent infections
   for (i in seq_along(t_inf)) {
     for (j in which(w_inf[i,] == 1)) {
-      state_true[,j] <- state_true[,j] + (samp_time > t_inf[i]) & (samp_time < clear_inf[i,j])
+      state_true[,j] <- state_true[,j] + (samp_time >= t_inf[i]) & (samp_time <= clear_inf[i,j])
     }
   }
   
@@ -172,14 +179,22 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
 #'
 #' @inheritParams sim_ind
 #' @param n number of individuals in cohort.
+#' @param n_inf if \code{NULL} then number of infections is drawn from the
+#'   model, but this parameter can also be used to manually set this value. If
+#'   so, input as a vector over individuals.
 #'
 #' @importFrom dplyr bind_rows
 #' @export
 
-sim_cohort <- function(n, samp_time, haplo_freqs, lambda, theta, decay_rate, sens) {
+sim_cohort <- function(n, samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
+                       n_inf = NULL, return_full = FALSE) {
   
   # check inputs
   assert_vector_pos(lambda)
+  if (!is.null(n_inf)) {
+    assert_vector_int(n_inf)
+    assert_length(n_inf, n)
+  }
   
   # fix input formats
   if (length(lambda) == 1) {
@@ -195,7 +210,9 @@ sim_cohort <- function(n, samp_time, haplo_freqs, lambda, theta, decay_rate, sen
                              theta = theta,
                              decay_rate = decay_rate,
                              sens = sens,
-                             ind_name = sprintf("ind%s", i))
+                             ind_name = sprintf("ind%s", i),
+                             n_inf = n_inf[i],
+                             return_full = return_full)
   }
   
   # combine observed data into single data.frame over all individuals

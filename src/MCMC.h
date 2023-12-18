@@ -15,6 +15,8 @@ public:
   // parameter values
   
   int n_rungs;
+  double start_time;
+  double end_time;
   
   std::vector<Particle> particle_vec;
   
@@ -27,6 +29,14 @@ public:
   std::vector<std::vector<int>> acceptance_out;
   std::vector<int> swap_acceptance_out;
   
+  // objects for storing results
+  std::vector<double> lambda_store;
+  std::vector<double> theta_store;
+  std::vector<double> decay_rate_store;
+  std::vector<double> sens_store;
+  std::vector<std::vector<int>> n_infections_store;
+  std::vector<std::vector<std::vector<double>>> infection_times_store;
+  
   // RNG
   cpp11::sexp rng_ptr;
   
@@ -38,6 +48,8 @@ public:
        cpp11::list proposal_sd,
        const int iteration_counter_init,
        const cpp11::doubles beta,
+       const double start_time,
+       const double end_time,
        cpp11::sexp rng_ptr);
   
   // member functions

@@ -15,6 +15,11 @@ public:
   // parameter values
   double lambda;
   double theta;
+  double decay_rate;
+  double sens;
+  std::vector<int> n_infections;
+  int n_samp;
+  std::vector<std::vector<double>> infection_times;
   
   // proposal sd
   std::vector<double> proposal_sd_vec;
@@ -32,8 +37,13 @@ public:
   // member functions
   void init(double lambda,
             double theta,
+            double decay_rate,
+            double sens,
+            std::vector<int> n_infections,
             std::vector<double> proposal_sd,
             double beta,
+            double start_time,
+            double end_time,
             cpp11::sexp rng_ptr);
   void update();
   
