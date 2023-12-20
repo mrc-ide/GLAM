@@ -1,24 +1,24 @@
 #------------------------------------------------
-#' @title Square a vector of values
+#' @title Extract the MCMC draws from a glam_mcmc object
 #'
-#' @description Simple test function that demonstrates some of the features of
-#'   this package by squaring an input vector of values.
+#' @description Raw MCMC draws are stored within an object of class
+#'   \code{glam_mcmc} in a series of lists. This makes it easier to extend the
+#'   MCMC as needed, but is not the most convenient format for exploring or
+#'   plotting. This function extracts these draws into a convenient long-form
+#'   data.frame for use in downstream functions.
 #'
-#' @param x vector of values.
+#' @param x an object of class \code{glam_mcmc}, as produced by
+#'   \code{glam_mcmc$new()}.
 #'
 #' @export
-#' @examples
-#' # Find square of first 100 values
-#' square(1:100)
 
-square <- function(x = 1:5) {
+get_mcmc_draws <- function(x) {
   
-  # print message to console
-  message("running R square function")
+  # check inputs
+  assert_class(x, "glam_mcmc")
   
-  # do something
-  ret <- cpp_test()
+  
   
   # return
-  return(ret)
+  return(NULL)
 }
