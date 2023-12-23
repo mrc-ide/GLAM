@@ -8,7 +8,9 @@ namespace writable = cpp11::writable;
 
 //------------------------------------------------
 [[cpp11::register]]
-list mcmc_cpp(const int iterations,
+list mcmc_cpp(cpp11::list data_list,
+              cpp11::list obs_time_list,
+              const int iterations,
               const bool burnin,
               list param_list,
               list proposal_sd,
@@ -22,7 +24,9 @@ list mcmc_cpp(const int iterations,
   std::chrono::high_resolution_clock::time_point t0 =  std::chrono::high_resolution_clock::now();
   
   // initialise MCMC
-  MCMC mcmc(param_list,
+  MCMC mcmc(data_list,
+            obs_time_list,
+            param_list,
             proposal_sd,
             iteration_counter_init,
             beta,
@@ -51,6 +55,7 @@ list mcmc_cpp(const int iterations,
     "sens"_nm = mcmc.sens_store,
     "n_infections"_nm = n_infections,
     "infection_times"_nm = infection_times,
+    "param_list_out"_nm = mcmc.param_list_out,
     "acceptance_out"_nm = acceptance_out,
     "swap_acceptance_out"_nm = mcmc.swap_acceptance_out,
     "dur"_nm = dur,

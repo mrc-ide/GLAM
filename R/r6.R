@@ -5,6 +5,7 @@
 #' 
 #' @import R6
 #' @import dust
+#' @importFrom tidyr pivot_wider
 #' @export
 
 glam_mcmc <- R6::R6Class(
@@ -16,12 +17,15 @@ glam_mcmc <- R6::R6Class(
     
     # data
     df_data = NULL,
+    list_data = NULL,
     n_samp = NULL,
     n_haplos = NULL,
     haplo_freqs = NULL,
     obs_time_list = NULL,
     
     # program flow
+    init_called = FALSE,
+    burn_called = FALSE,
     sample_called = FALSE,
     
     # MCMC parameters
@@ -80,6 +84,13 @@ glam_mcmc <- R6::R6Class(
       private$df_data <- df_data
       private$n_samp <- length(unique(df_data$ind))
       
+      # convert to list (this is how we will pass to C++)
+      private$list_data <- df_data |>
+        dplyr::arrange(time) |>
+        tidyr::pivot_wider(names_from = haplo, values_from = positive) |>
+        dplyr::select(-time) |>
+        dplyr::group_split(ind, .keep = FALSE)
+      
       # get haplotype info
       private$n_haplos <- length(unique(df_data$haplo))
       private$haplo_freqs <- df_data |>
@@ -124,6 +135,7 @@ glam_mcmc <- R6::R6Class(
     #' @param decay_rate TODO
     #' @param sens TODO
     #' @param n_infections TODO
+    #' @param infection_times TODO
     #' @param haplo_freqs TODO
     init = function(start_time,
                     end_time,
@@ -135,13 +147,17 @@ glam_mcmc <- R6::R6Class(
                     decay_rate = NULL,
                     sens = NULL,
                     n_infections = NULL,
+                    infection_times = NULL,
                     haplo_freqs = NULL
                     ) {
       
       # check inputs
-      assert_single_pos(start_time)
-      assert_single_pos(end_time)
+      assert_single_numeric(start_time)
+      obs_time_range <- range(unlist(private$obs_time_list))
+      assert_leq(start_time, obs_time_range[1], message = sprintf("start_time must be less than or equal to the first observation time (%s)", obs_time_range[1]))
+      assert_single_numeric(end_time)
       assert_gr(end_time, start_time)
+      assert_greq(end_time, obs_time_range[2], message = sprintf("end_time must be greater than or equal to the last observation time (%s)", obs_time_range[2]))
       assert_single_pos_int(chains, zero_allowed = FALSE)
       assert_single_pos_int(rungs, zero_allowed = FALSE)
       assert_single_pos_int(max_infections, zero_allowed = FALSE)
@@ -162,19 +178,22 @@ glam_mcmc <- R6::R6Class(
         assert_length(n_infections, private$n_samp)
         assert_bounded(n_infections, left = 0, right = max_infections)
       }
+      if (!is.null(infection_times)) {
+        assert_list(infection_times)
+        assert_length(infection_times, private$n_samp, message = sprintf("infection_times must be of length %s to match the number of samples found in the data", private$n_samp))
+        if (is.null(n_infections)) {
+          n_infections <- mapply(length, infection_times) # define n_infections from infection_times
+        } else {
+          assert_eq(mapply(length, infection_times_true), n_infections, message = "If both n_infections and infection_times are defined then the lengths of infection_times must match the values in n_infections")
+        }
+        mapply(function(x) {
+          assert_vector_bounded(x, left = start_time, right = end_time, message = "Infection times must be within the window defined by start_time and end_time")
+        }, infection_times_true)
+      }
       if (!is.null(haplo_freqs)) {
         assert_vector_bounded(haplo_freqs)
-        assert_length(n_infections, private$n_haplos)
+        assert_length(n_infections, private$n_haplos, message = sprintf("Must define %s haplotype frequencies to match the number found in the data"))
         assert_eq(sum(haplo_freqs), 1)
-      }
-      
-      # check that parameters are compatible with data
-      obs_time_range <- range(unlist(private$obs_time_list))
-      if (start_time > obs_time_range[1]) {
-        stop(sprintf("start_time must be less than or equal to the first observation time (%s)", obs_time_range[1]))
-      }
-      if (end_time < obs_time_range[2]) {
-        stop(sprintf("end_time must be greater than or equal to the last observation time (%s)", obs_time_range[2]))
       }
       
       # which parameters need updating
@@ -183,6 +202,7 @@ glam_mcmc <- R6::R6Class(
       decay_rate_fixed <- !is.null(decay_rate)
       sens_fixed <- !is.null(sens)
       n_infections_fixed <- !is.null(n_infections)
+      infection_times_fixed <- !is.null(infection_times)
       
       # initialise parameters in nested list over chains and then rungs
       param_list <- list()
@@ -198,13 +218,20 @@ glam_mcmc <- R6::R6Class(
           } else {
             n_infections <- sample(max_infections, private$n_samp, replace = TRUE)
           }
+          if (!infection_times_fixed) {
+            infection_times <- list()
+            for (k in 1:private$n_samp) {
+              infection_times[[k]] <- sort(runif(n_infections[k], min = start_time, max = end_time))
+            }
+          }
           
           param_list[[i]][[j]] <- list(
             lambda = lambda,
             theta = theta,
             decay_rate = decay_rate,
             sens = sens,
-            n_infections = n_infections
+            n_infections = n_infections,
+            infection_times = infection_times
             )
         }
       }
@@ -213,14 +240,12 @@ glam_mcmc <- R6::R6Class(
       proposal_sd <- list()
       n_proposal_sd <- 5
       for (i in 1:chains) {
-        proposal_sd[[i]] <- list()
-        for (j in 1:rungs) {
-          proposal_sd[[i]][[j]] <- list(lambda = 1,
-                                        theta = 1,
-                                        decay_rate = 1,
-                                        sens = 1,
-                                        infection_time = 1)
-        }
+        proposal_sd[[i]] <- replicate(rungs, c(lambda = 1,
+                                               theta = 1,
+                                               decay_rate = 1,
+                                               sens = 1,
+                                               infection_time = 1),
+                                      simplify = FALSE)
       }
       
       # initialise objects for storing results
@@ -246,7 +271,7 @@ glam_mcmc <- R6::R6Class(
       swap_acceptance_counter <- create_chain_phase_list(chains = chains,
                                                     base = rep(0, rungs - 1))
       
-      # haplo_freqs have already been calculated when loading data, but
+      # haplo_freqs will have already been calculated when loading data, but
       # overwrite if defined manually here
       if (!is.null(haplo_freqs)) {
         private$haplo_freqs <- haplo_freqs
@@ -266,6 +291,9 @@ glam_mcmc <- R6::R6Class(
       private$acceptance_counter <- acceptance_counter
       private$swap_acceptance_counter <- swap_acceptance_counter
       private$duration <- duration
+      
+      # update program flow
+      private$init_called <- TRUE
     },
     
     #--------------------
@@ -281,11 +309,18 @@ glam_mcmc <- R6::R6Class(
     #'   \code{FALSE}.
     burn = function(iterations, target_acceptance = 0.44, silent = FALSE) {
       
+      # program flow
+      assert_eq(private$init_called, TRUE, message = "MCMC must be initialised via init() before running burn-in phase")
+      assert_eq(private$sample_called, FALSE, message = "Cannot return to burn-in phase after sample() has been called")
+      
       # check inputs
       assert_single_pos_int(iterations)
       assert_greq(iterations, 10)
       assert_single_bounded(target_acceptance, inclusive_left = FALSE, inclusive_right = FALSE)
       assert_single_logical(silent)
+      
+      # update program flow
+      private$burn_called <- TRUE
       
       # run main loop
       self$run_burn_sample(burnin = TRUE,
@@ -305,18 +340,21 @@ glam_mcmc <- R6::R6Class(
     #'   \code{FALSE}.
     sample = function(iterations, silent = FALSE) {
       
+      # program flow
+      assert_eq(private$burn_called, TRUE, message = "MCMC must be burned in via burn() before running sampling phase")
+      
       # check inputs
       assert_single_pos_int(iterations)
       assert_greq(iterations, 10)
       assert_single_logical(silent)
       
-      # cannot go back to burnin
+      # update program flow
       private$sample_called <- TRUE
       
       # run main loop
       self$run_burn_sample(burnin = FALSE,
                            iterations = iterations,
-                           target_acceptance = 0.1,
+                           target_acceptance = 0.1, # this value is ignored
                            silent = silent)
     },
     
@@ -335,11 +373,6 @@ glam_mcmc <- R6::R6Class(
       
       phase_name <- ifelse(burnin, "burn", "sample")
       
-      # cannot run burnin after sampling
-      if (burnin && private$sample_called) {
-        stop("Cannot run burn() after sample() called")
-      }
-      
       # loop over chains
       chains <- private$chains
       for (chain in 1:chains) {
@@ -347,7 +380,9 @@ glam_mcmc <- R6::R6Class(
         #message(sprintf("\nRunning chain %s", chain))
         
         # run this chain
-        output_raw <- mcmc_cpp(iterations,                                        # iterations
+        output_raw <- mcmc_cpp(private$list_data,                                 # data in list format
+                               private$obs_time_list,                             # observation times
+                               iterations,                                        # iterations
                                burnin,                                            # burnin
                                private$param_list[[chain]],                       # params
                                private$proposal_sd[[chain]],                      # proposal_sd
@@ -361,11 +396,12 @@ glam_mcmc <- R6::R6Class(
         # sync RNG
         private$rng_list[[chain]]$sync()
         
-        #return(output_raw)
-        
         # convert raw output objects if needed
         acceptance_out <- matrix(unlist(output_raw$acceptance_out), nrow = length(output_raw$acceptance_out), byrow = TRUE)
         n_infections <- matrix(unlist(output_raw$n_infections), nrow = length(output_raw$n_infections), byrow = TRUE)
+        
+        # update params_list to final values of chain
+        private$param_list[[chain]] <- output_raw$param_list_out
         
         # append parameter draws
         private$lambda_store[[chain]] <- c(private$lambda_store[[chain]], output_raw$lambda)

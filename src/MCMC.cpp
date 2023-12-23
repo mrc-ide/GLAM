@@ -11,7 +11,9 @@ namespace writable = cpp11::writable;
 
 //------------------------------------------------
 // constructor
-MCMC::MCMC(cpp11::list param_list,
+MCMC::MCMC(cpp11::list data_list,
+           cpp11::list obs_time_list,
+           cpp11::list param_list,
            cpp11::list proposal_sd,
            const int iteration_counter_init,
            const cpp11::doubles beta,
@@ -49,11 +51,18 @@ MCMC::MCMC(cpp11::list param_list,
     integers tmp3 = tmp1["n_infections"];
     std::vector<int> n_infections = integers_to_vec(tmp3);
     
-    particle_vec[r].init(lambda,
+    list tmp4 = tmp1["infection_times"];
+    std::vector<std::vector<double>> infection_times = list_to_mat_double(tmp4);
+    
+    // pass parameters into particle
+    particle_vec[r].init(data_list,
+                         obs_time_list,
+                         lambda,
                          theta,
                          decay_rate,
                          sens,
                          n_infections,
+                         infection_times,
                          proposal_sd_mat[r],
                          beta[r],
                          start_time,
@@ -132,6 +141,19 @@ void MCMC::run_mcmc(bool burnin, int iterations) {
     infection_times_store[i] = particle_vec[0].infection_times;
     
     iteration_counter++;
+  }
+  
+  // store final state
+  for (int r = 0; r < n_rungs; ++r) {
+    writable::list tmp({
+      "lambda"_nm = particle_vec[r].lambda,
+      "theta"_nm = particle_vec[r].theta,
+      "decay_rate"_nm = particle_vec[r].decay_rate,
+      "sens"_nm = particle_vec[r].sens,
+      "n_infections"_nm = particle_vec[r].n_infections,
+      "infection_times"_nm = mat_double_to_list(particle_vec[r].infection_times)
+    });
+    param_list_out.push_back(tmp);
   }
   
 }

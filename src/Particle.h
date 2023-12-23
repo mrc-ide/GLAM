@@ -4,6 +4,7 @@
 #include <cpp11.hpp>
 #include <dust/r/random.hpp>
 #include "misc.h"
+#include "Indiv.h"
 
 //------------------------------------------------
 // class defining particle
@@ -27,6 +28,9 @@ public:
   std::vector<double> proposal_sd_vec;
   int n_proposal_sd;
   
+  // Indiv objects
+  std::vector<Indiv> indiv_vec;
+  
   // RNG
   dust::random::xoshiro256plus& rng_state;
   
@@ -37,16 +41,23 @@ public:
   Particle(dust::random::xoshiro256plus& rng_state) : rng_state(rng_state) {};
   
   // member functions
-  void init(double lambda,
+  void init(cpp11::list data_list,
+            cpp11::list obs_time_list,
+            double lambda,
             double theta,
             double decay_rate,
             double sens,
             std::vector<int> n_infections,
+            std::vector<std::vector<double>> infection_times,
             std::vector<double> proposal_sd,
             double beta,
             double start_time,
             double end_time,
             cpp11::sexp rng_ptr);
   void update();
+  void update_lambda();
+  void update_theta();
+  void update_decay_rate();
+  void update_sens();
   
 };

@@ -13,11 +13,14 @@ namespace writable = cpp11::writable;
 
 //------------------------------------------------
 // constructor
-void Particle::init(double lambda,
+void Particle::init(cpp11::list data_list,
+                    cpp11::list obs_time_list,
+                    double lambda,
                     double theta,
                     double decay_rate,
                     double sens,
                     std::vector<int> n_infections,
+                    std::vector<std::vector<double>> infection_times,
                     std::vector<double> proposal_sd,
                     double beta,
                     double start_time,
@@ -34,20 +37,42 @@ void Particle::init(double lambda,
   this->decay_rate = decay_rate;
   this->sens = sens;
   this->n_infections = n_infections;
+  this->infection_times = infection_times;
   this->start_time = start_time;
   this->end_time = end_time;
+  n_samp = n_infections.size();
   
   proposal_sd_vec = proposal_sd;
   n_proposal_sd = proposal_sd_vec.size();
   
-  // draw starting infection times
-  n_samp = n_infections.size();
-  infection_times = std::vector<std::vector<double>>(n_samp);
+  // initialise Indiv objects
+  indiv_vec = std::vector<Indiv>(n_samp, Indiv(rng_state));
   for (int i = 0; i < n_samp; ++i) {
-    infection_times[i] = std::vector<double>(n_infections[i]);
-    for (int j = 0; j < n_infections[i]; ++j) {
-      infection_times[i][j] = start_time + (end_time - start_time) * dust::random::random_real<double>(rng_state);
+    
+    // convert data to boolean matrix for this individual
+    list tmp = data_list[i];
+    std::vector<std::vector<bool>> data_bool(tmp.size());
+    for (int j = 0; j < tmp.size(); ++j) {
+      doubles tmp_j = tmp[j];
+      data_bool[j] = std::vector<bool>(tmp_j.size());
+      for (int k = 0; k < tmp_j.size(); ++k) {
+        data_bool[j][k] = tmp_j[k];
+      }
     }
+    
+    // get observation times in std vector
+    doubles tmp2 = obs_time_list[i];
+    std::vector<double> obs_time_vec(tmp2.size());
+    for (int j = 0; j < tmp2.size(); ++j) {
+      obs_time_vec[j] = tmp2[j];
+    }
+    
+    // initialise Indiv
+    indiv_vec[i].init(data_bool,
+                      obs_time_vec,
+                      rng_ptr,
+                      n_infections[i],
+                      infection_times[i]);
   }
   
 }
@@ -56,13 +81,49 @@ void Particle::init(double lambda,
 // update
 void Particle::update() {
   
-  lambda = dust::random::random_real<double>(rng_state);
-  theta = dust::random::random_real<double>(rng_state);
-  
+  // split-merge update steps on all individuals
   for (int i = 0; i < n_samp; ++i) {
-    for (int j = 0; j < n_infections[i]; ++j) {
-      infection_times[i][j] = start_time + (end_time - start_time) * dust::random::random_real<double>(rng_state);
-    }
+    indiv_vec[i].update_n_infections();
   }
   
+  // update all infection times
+  for (int i = 0; i < n_samp; ++i) {
+    indiv_vec[i].update_infection_times();
+  }
+  
+  // store all infection times
+  for (int i = 0; i < n_samp; ++i) {
+    n_infections[i] = indiv_vec[i].get_n_infections();
+    infection_times[i] = indiv_vec[i].get_infection_times();
+  }
+  
+  // update global parameters
+  update_lambda();
+  update_theta();
+  update_decay_rate();
+  update_sens();
+  
+}
+
+//------------------------------------------------
+// update
+void Particle::update_lambda() {
+  lambda = dust::random::random_real<double>(rng_state);
+}
+
+//------------------------------------------------
+// update
+void Particle::update_theta() {
+  theta = dust::random::random_real<double>(rng_state);
+}
+
+//------------------------------------------------
+// update
+void Particle::update_decay_rate() {
+  decay_rate = dust::random::random_real<double>(rng_state);
+}
+//------------------------------------------------
+// update
+void Particle::update_sens() {
+  sens = dust::random::random_real<double>(rng_state);
 }

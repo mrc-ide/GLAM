@@ -36,6 +36,7 @@ public:
   std::vector<double> sens_store;
   std::vector<std::vector<int>> n_infections_store;
   std::vector<std::vector<std::vector<double>>> infection_times_store;
+  cpp11::writable::list param_list_out;
   
   // RNG
   cpp11::sexp rng_ptr;
@@ -44,7 +45,9 @@ public:
   // PUBLIC FUNCTIONS
   
   // constructors
-  MCMC(cpp11::list param_list,
+  MCMC(cpp11::list data_list,
+       cpp11::list obs_time_list,
+       cpp11::list param_list,
        cpp11::list proposal_sd,
        const int iteration_counter_init,
        const cpp11::doubles beta,
