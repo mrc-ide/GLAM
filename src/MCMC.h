@@ -4,6 +4,7 @@
 #include <cpp11.hpp>
 #include "Particle.h"
 #include "misc.h"
+#include "System.h"
 
 //------------------------------------------------
 // class defining MCMC
@@ -17,6 +18,7 @@ public:
   int n_rungs;
   double start_time;
   double end_time;
+  int max_infections;
   
   std::vector<Particle> particle_vec;
   
@@ -53,6 +55,7 @@ public:
        const cpp11::doubles beta,
        const double start_time,
        const double end_time,
+       int max_infections,
        cpp11::sexp rng_ptr);
   
   // member functions

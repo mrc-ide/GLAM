@@ -25,6 +25,7 @@ void Particle::init(cpp11::list data_list,
                     double beta,
                     double start_time,
                     double end_time,
+                    int max_infections,
                     cpp11::sexp rng_ptr) {
   
   // initialise RNG
@@ -40,8 +41,10 @@ void Particle::init(cpp11::list data_list,
   this->infection_times = infection_times;
   this->start_time = start_time;
   this->end_time = end_time;
+  this->max_infections = max_infections;
   n_samp = n_infections.size();
   
+  // proposal_sd_vec goes through {lambda, theta, decay_rate, sens, infection_time}
   proposal_sd_vec = proposal_sd;
   n_proposal_sd = proposal_sd_vec.size();
   
@@ -70,6 +73,9 @@ void Particle::init(cpp11::list data_list,
     // initialise Indiv
     indiv_vec[i].init(data_bool,
                       obs_time_vec,
+                      start_time,
+                      end_time,
+                      max_infections,
                       rng_ptr,
                       n_infections[i],
                       infection_times[i]);
@@ -108,7 +114,23 @@ void Particle::update() {
 //------------------------------------------------
 // update
 void Particle::update_lambda() {
-  lambda = dust::random::random_real<double>(rng_state);
+  
+  // dummy update
+  double lambda_prop = rnorm1_pos(rng_state, lambda, proposal_sd_vec[0]);
+  
+  double loglike = 0.0;
+  double loglike_prop = 0.0;
+  for (int i = 0; i < n_samp; ++i) {
+    loglike += indiv_vec[i].loglike_basic(lambda, theta, decay_rate, sens);
+    loglike_prop += indiv_vec[i].loglike_basic(lambda_prop, theta, decay_rate, sens);
+  }
+  
+  double MH = loglike_prop - loglike;
+  
+  if (log(runif1(rng_state)) < MH) {
+    lambda = lambda_prop;
+  }
+  
 }
 
 //------------------------------------------------

@@ -19,6 +19,7 @@ MCMC::MCMC(cpp11::list data_list,
            const cpp11::doubles beta,
            const double start_time,
            const double end_time,
+           int max_infections,
            cpp11::sexp rng_ptr) {
   
   auto rng = dust::random::r::rng_pointer_get<dust::random::xoshiro256plus>(rng_ptr);
@@ -67,6 +68,7 @@ MCMC::MCMC(cpp11::list data_list,
                          beta[r],
                          start_time,
                          end_time,
+                         max_infections,
                          rng_ptr);
   }
   

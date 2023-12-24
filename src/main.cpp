@@ -2,6 +2,7 @@
 #include <cpp11.hpp>
 #include "MCMC.h"
 #include "misc.h"
+#include "System.h"
 
 using namespace cpp11;
 namespace writable = cpp11::writable;
@@ -18,10 +19,19 @@ list mcmc_cpp(cpp11::list data_list,
               const doubles beta,
               double start_time,
               double end_time,
+              int max_infections,
               cpp11::sexp rng_ptr) {
   
   // start timer
   std::chrono::high_resolution_clock::time_point t0 =  std::chrono::high_resolution_clock::now();
+  
+  // initialise RNG state
+  auto rng = dust::random::r::rng_pointer_get<dust::random::xoshiro256plus>(rng_ptr);
+  dust::random::xoshiro256plus& rng_state = rng->state(0);
+  
+  // create system object to hold all input values. This makes it easier when
+  // passing objects around between classes
+  System s(rng_state);
   
   // initialise MCMC
   MCMC mcmc(data_list,
@@ -32,6 +42,7 @@ list mcmc_cpp(cpp11::list data_list,
             beta,
             start_time,
             end_time,
+            max_infections,
             rng_ptr);
   
   // run main loop

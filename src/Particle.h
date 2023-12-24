@@ -4,6 +4,7 @@
 #include <cpp11.hpp>
 #include <dust/r/random.hpp>
 #include "misc.h"
+#include "probability.h"
 #include "Indiv.h"
 
 //------------------------------------------------
@@ -23,6 +24,7 @@ public:
   std::vector<std::vector<double>> infection_times;
   double start_time;
   double end_time;
+  int max_infections;
   
   // proposal sd
   std::vector<double> proposal_sd_vec;
@@ -53,6 +55,7 @@ public:
             double beta,
             double start_time,
             double end_time,
+            int max_infections,
             cpp11::sexp rng_ptr);
   void update();
   void update_lambda();

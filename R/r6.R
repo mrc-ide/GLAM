@@ -294,6 +294,8 @@ glam_mcmc <- R6::R6Class(
       
       # update program flow
       private$init_called <- TRUE
+      private$burn_called <- FALSE
+      private$sample_called <- FALSE
     },
     
     #--------------------
@@ -390,6 +392,7 @@ glam_mcmc <- R6::R6Class(
                                rep(1, private$rungs),                             # beta
                                private$start_time,                                # start_time
                                private$end_time,                                  # end_time
+                               private$max_infections,                            # max infections
                                private$rng_list[[chain]]                          # rng_ptr
         )
         

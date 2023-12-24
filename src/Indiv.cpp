@@ -15,6 +15,9 @@ namespace writable = cpp11::writable;
 // initialise
 void Indiv::init(std::vector<std::vector<bool>> data_bool,
                  std::vector<double> obs_times,
+                 double start_time,
+                 double end_time,
+                 int max_infections,
                  cpp11::sexp rng_ptr,
                  int n_infections,
                  std::vector<double> infection_times) {
@@ -26,6 +29,9 @@ void Indiv::init(std::vector<std::vector<bool>> data_bool,
   n_obs = data[0].size();
   this->n_infections = n_infections;
   this->infection_times = infection_times;
+  this->start_time = start_time;
+  this->end_time = end_time;
+  this->max_infections = max_infections;
   
   // sanity checks on inputs
   if (infection_times.size() != n_infections) {
@@ -49,10 +55,29 @@ void Indiv::init(std::vector<std::vector<bool>> data_bool,
 void Indiv::update_n_infections() {
   
   // dummy update step. Randomly drop or add infection
-  if (dust::random::random_real<double>(rng_state) < 0.5) {
-    print("foo");
-  } else {
-    print("bar");
+  if (runif1(rng_state) < 0.5) {  // add infection
+    if (n_infections == max_infections) {
+      return;
+    }
+    
+    double new_time = runif1(rng_state, start_time, end_time);
+    std::vector<bool> allele_vec(n_haplos, true);
+    
+    infection_alleles.push_back(allele_vec);
+    infection_times.push_back(new_time);
+    n_infections++;
+    
+  } else {  // drop infection
+    if (n_infections == 0) {
+      return;
+    }
+    
+    int tmp1 = sample2(rng_state, 0, n_infections - 1);
+    
+    infection_alleles.erase(infection_alleles.begin() + tmp1);
+    infection_times.erase(infection_times.begin() + tmp1);
+    n_infections--;
+    
   }
   
 }
@@ -61,6 +86,17 @@ void Indiv::update_n_infections() {
 // update timings of all infections
 void Indiv::update_infection_times() {
   
+  // dummy update
+  for (int i = 0; i < n_infections; ++i) {
+    infection_times[i] = runif1(rng_state, start_time, end_time);
+  }
+  
+}
+
+//------------------------------------------------
+// basic log-likelihood, no marginalisation
+double Indiv::loglike_basic(double lambda, double theta, double decay_rate, double sens) {
+  return 0.0;
 }
 
 //------------------------------------------------
