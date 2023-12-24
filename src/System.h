@@ -25,6 +25,10 @@ public:
   
   int n_rungs;
   
+  // proposal sd
+  std::vector<std::vector<double>> proposal_sd_mat;
+  int n_proposal_sd;
+  
   
   // PUBLIC FUNCTIONS
   
@@ -40,5 +44,7 @@ public:
             double end_time,
             int max_infections,
             cpp11::sexp rng_ptr);
+  std::vector<double> get_proposal_sd_vec(int rung_index);
+  //std::vector<std::vector<bool>> get_data_bool(int ind_index);
   
 };

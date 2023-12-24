@@ -13,25 +13,31 @@ namespace writable = cpp11::writable;
 
 //------------------------------------------------
 // initialise
-void Indiv::init(std::vector<std::vector<bool>> data_bool,
+void Indiv::init(System * sys,
+                 int rung_index,
+                 int ind_index,
+                 std::vector<std::vector<bool>> data_bool,
                  std::vector<double> obs_times,
-                 double start_time,
-                 double end_time,
-                 int max_infections,
-                 cpp11::sexp rng_ptr,
                  int n_infections,
                  std::vector<double> infection_times) {
   
   // copy over values
+  this->rung_index = rung_index;
+  this->ind_index = ind_index;
+  //data = sys->get_data_bool(ind_index);
+  //print_matrix(data);
   data = data_bool;
   n_haplos = data.size();
   this->obs_times = obs_times;
   n_obs = data[0].size();
   this->n_infections = n_infections;
   this->infection_times = infection_times;
-  this->start_time = start_time;
-  this->end_time = end_time;
-  this->max_infections = max_infections;
+  start_time = sys->start_time;
+  end_time = sys->end_time;
+  max_infections = sys->max_infections;
+  
+  // initialise RNG
+  rng_state = sys->rng_state;
   
   // sanity checks on inputs
   if (infection_times.size() != n_infections) {
@@ -43,10 +49,6 @@ void Indiv::init(std::vector<std::vector<bool>> data_bool,
   
   // main alleles array. Initialise with all alleles introduced (must be at least one introduced)
   infection_alleles = std::vector<std::vector<bool>>(n_infections, std::vector<bool>(n_haplos, true));
-  
-  // initialise RNG
-  auto rng = dust::random::r::rng_pointer_get<dust::random::xoshiro256plus>(rng_ptr);
-  rng_state = rng->state(0);
   
 }
 

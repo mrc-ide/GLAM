@@ -6,6 +6,7 @@
 #include "misc.h"
 #include "probability.h"
 #include "Indiv.h"
+#include "System.h"
 
 //------------------------------------------------
 // class defining particle
@@ -13,6 +14,10 @@ class Particle {
   
 public:
   // PUBLIC OBJECTS
+  
+  // pointer to system object
+  System * sys;
+  int rung_index;
   
   // parameter values
   double lambda;
@@ -22,9 +27,6 @@ public:
   std::vector<int> n_infections;
   int n_samp;
   std::vector<std::vector<double>> infection_times;
-  double start_time;
-  double end_time;
-  int max_infections;
   
   // proposal sd
   std::vector<double> proposal_sd_vec;
@@ -43,7 +45,9 @@ public:
   Particle(dust::random::xoshiro256plus& rng_state) : rng_state(rng_state) {};
   
   // member functions
-  void init(cpp11::list data_list,
+  void init(System * sys,
+            int rung_index,
+            cpp11::list data_list,
             cpp11::list obs_time_list,
             double lambda,
             double theta,
@@ -51,12 +55,7 @@ public:
             double sens,
             std::vector<int> n_infections,
             std::vector<std::vector<double>> infection_times,
-            std::vector<double> proposal_sd,
-            double beta,
-            double start_time,
-            double end_time,
-            int max_infections,
-            cpp11::sexp rng_ptr);
+            double beta);
   void update();
   void update_lambda();
   void update_theta();

@@ -13,7 +13,9 @@ namespace writable = cpp11::writable;
 
 //------------------------------------------------
 // constructor
-void Particle::init(cpp11::list data_list,
+void Particle::init(System * sys,
+                    int rung_index,
+                    cpp11::list data_list,
                     cpp11::list obs_time_list,
                     double lambda,
                     double theta,
@@ -21,16 +23,14 @@ void Particle::init(cpp11::list data_list,
                     double sens,
                     std::vector<int> n_infections,
                     std::vector<std::vector<double>> infection_times,
-                    std::vector<double> proposal_sd,
-                    double beta,
-                    double start_time,
-                    double end_time,
-                    int max_infections,
-                    cpp11::sexp rng_ptr) {
+                    double beta) {
+  
+  // copy pointer to System object
+  this->sys = sys;
+  this->rung_index = rung_index;
   
   // initialise RNG
-  auto rng = dust::random::r::rng_pointer_get<dust::random::xoshiro256plus>(rng_ptr);
-  rng_state = rng->state(0);
+  rng_state = sys->rng_state;
   
   // copy over known values
   this->lambda = lambda;
@@ -39,13 +39,11 @@ void Particle::init(cpp11::list data_list,
   this->sens = sens;
   this->n_infections = n_infections;
   this->infection_times = infection_times;
-  this->start_time = start_time;
-  this->end_time = end_time;
-  this->max_infections = max_infections;
   n_samp = n_infections.size();
   
+  
   // proposal_sd_vec goes through {lambda, theta, decay_rate, sens, infection_time}
-  proposal_sd_vec = proposal_sd;
+  proposal_sd_vec = sys->get_proposal_sd_vec(rung_index);
   n_proposal_sd = proposal_sd_vec.size();
   
   // initialise Indiv objects
@@ -71,12 +69,11 @@ void Particle::init(cpp11::list data_list,
     }
     
     // initialise Indiv
-    indiv_vec[i].init(data_bool,
+    indiv_vec[i].init(sys,
+                      rung_index,
+                      i,
+                      data_bool,
                       obs_time_vec,
-                      start_time,
-                      end_time,
-                      max_infections,
-                      rng_ptr,
                       n_infections[i],
                       infection_times[i]);
   }

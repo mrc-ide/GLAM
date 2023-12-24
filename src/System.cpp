@@ -32,8 +32,38 @@ void System::init(cpp11::list data_list,
   
   n_rungs = beta.size();
   
+  // proposal sd
+  proposal_sd_mat = list_to_mat_double(proposal_sd);
+  n_proposal_sd = proposal_sd_mat[0].size();
+  
+  
   // initialise RNG
   auto rng = dust::random::r::rng_pointer_get<dust::random::xoshiro256plus>(rng_ptr);
   rng_state = rng->state(0);
   
 }
+
+//------------------------------------------------
+// get one row of the proposal_sd_mat matrix
+std::vector<double> System::get_proposal_sd_vec(int rung_index) {
+  return proposal_sd_mat[rung_index];
+}
+/*
+//------------------------------------------------
+// get observation data for this individual
+std::vector<std::vector<bool>> System::get_data_bool(int ind_index) {
+  
+  // convert data to boolean matrix for this individual
+  list tmp = data_list[ind_index];
+  std::vector<std::vector<bool>> data_bool(tmp.size());
+  for (int i = 0; i < tmp.size(); ++i) {
+    doubles tmp_i = tmp[i];
+    data_bool[i] = std::vector<bool>(tmp_i.size());
+    for (int j = 0; j < tmp_i.size(); ++j) {
+      data_bool[i][j] = tmp_i[j];
+    }
+  }
+  
+  return data_bool;
+}
+*/
