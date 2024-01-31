@@ -13,14 +13,17 @@ namespace writable = cpp11::writable;
 
 //------------------------------------------------
 // initialise
-void Indiv::init(std::vector<std::vector<bool>> data_bool,
+void Indiv::init(System &sys,
+                 std::vector<std::vector<bool>> data_bool,
                  std::vector<double> obs_times,
                  double start_time,
                  double end_time,
                  int max_infections,
-                 cpp11::sexp rng_ptr,
                  int n_infections,
                  std::vector<double> infection_times) {
+  
+  // initialise RNG
+  rng_state = sys.rng_state;
   
   // copy over values
   data = data_bool;
@@ -43,10 +46,6 @@ void Indiv::init(std::vector<std::vector<bool>> data_bool,
   
   // main alleles array. Initialise with all alleles introduced (must be at least one introduced)
   infection_alleles = std::vector<std::vector<bool>>(n_infections, std::vector<bool>(n_haplos, true));
-  
-  // initialise RNG
-  auto rng = dust::random::r::rng_pointer_get<dust::random::xoshiro256plus>(rng_ptr);
-  rng_state = rng->state(0);
   
 }
 

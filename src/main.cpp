@@ -31,10 +31,22 @@ list mcmc_cpp(cpp11::list data_list,
   
   // create system object to hold all input values. This makes it easier when
   // passing objects around between classes
-  System s(rng_state);
+  System sys(rng_state);
+  sys.init(data_list,
+           obs_time_list,
+           param_list,
+           proposal_sd,
+           iteration_counter_init,
+           beta,
+           start_time,
+           end_time,
+           max_infections,
+           rng_ptr);
   
   // initialise MCMC
-  MCMC mcmc(data_list,
+  MCMC mcmc(sys.rng_state);
+  mcmc.init(sys,
+            data_list,
             obs_time_list,
             param_list,
             proposal_sd,
@@ -42,8 +54,7 @@ list mcmc_cpp(cpp11::list data_list,
             beta,
             start_time,
             end_time,
-            max_infections,
-            rng_ptr);
+            max_infections);
   
   // run main loop
   mcmc.run_mcmc(true, iterations);

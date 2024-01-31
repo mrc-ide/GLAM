@@ -13,7 +13,8 @@ namespace writable = cpp11::writable;
 
 //------------------------------------------------
 // constructor
-void Particle::init(cpp11::list data_list,
+void Particle::init(System &sys,
+                    cpp11::list data_list,
                     cpp11::list obs_time_list,
                     double lambda,
                     double theta,
@@ -25,12 +26,10 @@ void Particle::init(cpp11::list data_list,
                     double beta,
                     double start_time,
                     double end_time,
-                    int max_infections,
-                    cpp11::sexp rng_ptr) {
+                    int max_infections) {
   
   // initialise RNG
-  auto rng = dust::random::r::rng_pointer_get<dust::random::xoshiro256plus>(rng_ptr);
-  rng_state = rng->state(0);
+  rng_state = sys.rng_state;
   
   // copy over known values
   this->lambda = lambda;
@@ -71,12 +70,12 @@ void Particle::init(cpp11::list data_list,
     }
     
     // initialise Indiv
-    indiv_vec[i].init(data_bool,
+    indiv_vec[i].init(sys,
+                      data_bool,
                       obs_time_vec,
                       start_time,
                       end_time,
                       max_infections,
-                      rng_ptr,
                       n_infections[i],
                       infection_times[i]);
   }

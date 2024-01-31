@@ -6,6 +6,7 @@
 #include "misc.h"
 #include "probability.h"
 #include "Indiv.h"
+#include "System.h"
 
 //------------------------------------------------
 // class defining particle
@@ -43,7 +44,8 @@ public:
   Particle(dust::random::xoshiro256plus& rng_state) : rng_state(rng_state) {};
   
   // member functions
-  void init(cpp11::list data_list,
+  void init(System &sys,
+            cpp11::list data_list,
             cpp11::list obs_time_list,
             double lambda,
             double theta,
@@ -55,8 +57,8 @@ public:
             double beta,
             double start_time,
             double end_time,
-            int max_infections,
-            cpp11::sexp rng_ptr);
+            int max_infections);
+  
   void update();
   void update_lambda();
   void update_theta();

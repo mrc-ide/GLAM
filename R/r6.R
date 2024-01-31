@@ -182,6 +182,7 @@ glam_mcmc <- R6::R6Class(
         assert_list(infection_times)
         assert_length(infection_times, private$n_samp, message = sprintf("infection_times must be of length %s to match the number of samples found in the data", private$n_samp))
         if (is.null(n_infections)) {
+          message("Defining n_infections from infection_times")
           n_infections <- mapply(length, infection_times) # define n_infections from infection_times
         } else {
           assert_eq(mapply(length, infection_times_true), n_infections, message = "If both n_infections and infection_times are defined then the lengths of infection_times must match the values in n_infections")

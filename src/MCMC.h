@@ -15,6 +15,9 @@ public:
   
   // parameter values
   
+  // pointer to system object
+  System * sys;
+  
   int n_rungs;
   double start_time;
   double end_time;
@@ -41,24 +44,26 @@ public:
   cpp11::writable::list param_list_out;
   
   // RNG
-  cpp11::sexp rng_ptr;
+  dust::random::xoshiro256plus& rng_state;
   
   
   // PUBLIC FUNCTIONS
   
   // constructors
-  MCMC(cpp11::list data_list,
-       cpp11::list obs_time_list,
-       cpp11::list param_list,
-       cpp11::list proposal_sd,
-       const int iteration_counter_init,
-       const cpp11::doubles beta,
-       const double start_time,
-       const double end_time,
-       int max_infections,
-       cpp11::sexp rng_ptr);
+  MCMC(dust::random::xoshiro256plus& rng_state) : rng_state(rng_state) {};
   
   // member functions
+  void init(System &sys,
+            cpp11::list data_list,
+            cpp11::list obs_time_list,
+            cpp11::list param_list,
+            cpp11::list proposal_sd,
+            const int iteration_counter_init,
+            const cpp11::doubles beta,
+            const double start_time,
+            const double end_time,
+            int max_infections);
+  
   void run_mcmc(bool burnin, int interations);
   
 };
