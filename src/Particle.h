@@ -45,7 +45,6 @@ public:
   
   // member functions
   void init(System &sys,
-            cpp11::list data_list,
             cpp11::list obs_time_list,
             double lambda,
             double theta,

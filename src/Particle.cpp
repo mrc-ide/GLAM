@@ -14,7 +14,6 @@ namespace writable = cpp11::writable;
 //------------------------------------------------
 // constructor
 void Particle::init(System &sys,
-                    cpp11::list data_list,
                     cpp11::list obs_time_list,
                     double lambda,
                     double theta,
@@ -51,17 +50,6 @@ void Particle::init(System &sys,
   indiv_vec = std::vector<Indiv>(n_samp, Indiv(rng_state));
   for (int i = 0; i < n_samp; ++i) {
     
-    // convert data to boolean matrix for this individual
-    list tmp = data_list[i];
-    std::vector<std::vector<bool>> data_bool(tmp.size());
-    for (int j = 0; j < tmp.size(); ++j) {
-      doubles tmp_j = tmp[j];
-      data_bool[j] = std::vector<bool>(tmp_j.size());
-      for (int k = 0; k < tmp_j.size(); ++k) {
-        data_bool[j][k] = tmp_j[k];
-      }
-    }
-    
     // get observation times in std vector
     doubles tmp2 = obs_time_list[i];
     std::vector<double> obs_time_vec(tmp2.size());
@@ -71,7 +59,7 @@ void Particle::init(System &sys,
     
     // initialise Indiv
     indiv_vec[i].init(sys,
-                      data_bool,
+                      sys.data_bool[i],
                       obs_time_vec,
                       start_time,
                       end_time,

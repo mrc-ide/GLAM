@@ -12,7 +12,6 @@ namespace writable = cpp11::writable;
 //------------------------------------------------
 // initialise
 void MCMC::init(System &sys,
-                cpp11::list data_list,
                 cpp11::list obs_time_list,
                 cpp11::list param_list,
                 cpp11::list proposal_sd,
@@ -60,7 +59,6 @@ void MCMC::init(System &sys,
     
     // pass parameters into particle
     particle_vec[r].init(sys,
-                         data_list,
                          obs_time_list,
                          lambda,
                          theta,

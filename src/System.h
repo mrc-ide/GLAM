@@ -23,7 +23,10 @@ public:
   int max_infections;
   dust::random::xoshiro256plus& rng_state;
   
+  int n_samp;
   int n_rungs;
+  
+  std::vector<std::vector<std::vector<bool>>> data_bool;
   
   
   // PUBLIC FUNCTIONS

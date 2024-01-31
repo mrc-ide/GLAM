@@ -30,10 +30,27 @@ void System::init(cpp11::list data_list,
   this->end_time = end_time;
   this->max_infections = max_infections;
   
+  n_samp = data_list.size();
   n_rungs = beta.size();
   
   // initialise RNG
   auto rng = dust::random::r::rng_pointer_get<dust::random::xoshiro256plus>(rng_ptr);
   rng_state = rng->state(0);
+  
+  // convert data to vector of boolean matrices
+  data_bool = std::vector<std::vector<std::vector<bool>>>(n_samp);
+  for (int i = 0; i < n_samp; ++i) {
+    
+    // convert data to boolean matrix for this individual
+    list tmp = data_list[i];
+    data_bool[i] = std::vector<std::vector<bool>>(tmp.size());
+    for (int j = 0; j < tmp.size(); ++j) {
+      doubles tmp_j = tmp[j];
+      data_bool[i][j] = std::vector<bool>(tmp_j.size());
+      for (int k = 0; k < tmp_j.size(); ++k) {
+        data_bool[i][j][k] = tmp_j[k];
+      }
+    }
+  }
   
 }

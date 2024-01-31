@@ -46,7 +46,6 @@ list mcmc_cpp(cpp11::list data_list,
   // initialise MCMC
   MCMC mcmc(sys.rng_state);
   mcmc.init(sys,
-            data_list,
             obs_time_list,
             param_list,
             proposal_sd,
