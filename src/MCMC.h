@@ -54,7 +54,6 @@ public:
   
   // member functions
   void init(System &sys,
-            cpp11::list obs_time_list,
             cpp11::list param_list,
             cpp11::list proposal_sd,
             const int iteration_counter_init,

@@ -53,4 +53,15 @@ void System::init(cpp11::list data_list,
     }
   }
   
+  // get observation times in vector of vector doubles
+  obs_time_vec = std::vector<std::vector<double>>(n_samp);
+  for (int i = 0; i < n_samp; ++i) {
+    
+    doubles tmp2 = obs_time_list[i];
+    obs_time_vec[i] = std::vector<double>(tmp2.size());
+    for (int j = 0; j < tmp2.size(); ++j) {
+      obs_time_vec[i][j] = tmp2[j];
+    }
+  }
+  
 }

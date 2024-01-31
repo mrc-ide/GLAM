@@ -27,6 +27,7 @@ public:
   int n_rungs;
   
   std::vector<std::vector<std::vector<bool>>> data_bool;
+  std::vector<std::vector<double>> obs_time_vec;
   
   
   // PUBLIC FUNCTIONS

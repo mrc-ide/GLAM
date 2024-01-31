@@ -14,7 +14,6 @@ namespace writable = cpp11::writable;
 //------------------------------------------------
 // constructor
 void Particle::init(System &sys,
-                    cpp11::list obs_time_list,
                     double lambda,
                     double theta,
                     double decay_rate,
@@ -49,18 +48,9 @@ void Particle::init(System &sys,
   // initialise Indiv objects
   indiv_vec = std::vector<Indiv>(n_samp, Indiv(rng_state));
   for (int i = 0; i < n_samp; ++i) {
-    
-    // get observation times in std vector
-    doubles tmp2 = obs_time_list[i];
-    std::vector<double> obs_time_vec(tmp2.size());
-    for (int j = 0; j < tmp2.size(); ++j) {
-      obs_time_vec[j] = tmp2[j];
-    }
-    
-    // initialise Indiv
     indiv_vec[i].init(sys,
                       sys.data_bool[i],
-                      obs_time_vec,
+                      sys.obs_time_vec[i],
                       start_time,
                       end_time,
                       max_infections,
