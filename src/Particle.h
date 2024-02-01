@@ -23,8 +23,6 @@ public:
   std::vector<int> n_infections;
   int n_samp;
   std::vector<std::vector<double>> infection_times;
-  double start_time;
-  double end_time;
   int max_infections;
   
   // proposal sd
@@ -52,10 +50,7 @@ public:
             std::vector<int> n_infections,
             std::vector<std::vector<double>> infection_times,
             std::vector<double> proposal_sd,
-            double beta,
-            double start_time,
-            double end_time,
-            int max_infections);
+            double beta);
   
   void update();
   void update_lambda();

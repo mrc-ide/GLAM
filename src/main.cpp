@@ -49,10 +49,7 @@ list mcmc_cpp(cpp11::list data_list,
             param_list,
             proposal_sd,
             iteration_counter_init,
-            beta,
-            start_time,
-            end_time,
-            max_infections);
+            beta);
   
   // run main loop
   mcmc.run_mcmc(true, iterations);

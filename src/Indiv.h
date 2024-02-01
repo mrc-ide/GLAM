@@ -39,9 +39,6 @@ public:
   void init(System &sys,
             std::vector<std::vector<bool>> data_bool,
             std::vector<double> obs_times,
-            double start_time,
-            double end_time,
-            int max_infections,
             int n_infections,
             std::vector<double> infection_times);
   

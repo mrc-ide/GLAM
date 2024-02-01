@@ -21,10 +21,7 @@ void Particle::init(System &sys,
                     std::vector<int> n_infections,
                     std::vector<std::vector<double>> infection_times,
                     std::vector<double> proposal_sd,
-                    double beta,
-                    double start_time,
-                    double end_time,
-                    int max_infections) {
+                    double beta) {
   
   // initialise RNG
   rng_state = sys.rng_state;
@@ -36,9 +33,7 @@ void Particle::init(System &sys,
   this->sens = sens;
   this->n_infections = n_infections;
   this->infection_times = infection_times;
-  this->start_time = start_time;
-  this->end_time = end_time;
-  this->max_infections = max_infections;
+  this->max_infections = sys.max_infections;
   n_samp = n_infections.size();
   
   // proposal_sd_vec goes through {lambda, theta, decay_rate, sens, infection_time}
@@ -51,9 +46,6 @@ void Particle::init(System &sys,
     indiv_vec[i].init(sys,
                       sys.data_bool[i],
                       sys.obs_time_vec[i],
-                      start_time,
-                      end_time,
-                      max_infections,
                       n_infections[i],
                       infection_times[i]);
   }

@@ -15,10 +15,7 @@ void MCMC::init(System &sys,
                 cpp11::list param_list,
                 cpp11::list proposal_sd,
                 const int iteration_counter_init,
-                const cpp11::doubles beta,
-                const double start_time,
-                const double end_time,
-                int max_infections) {
+                const cpp11::doubles beta) {
   
   // pointer to system object
   this->sys = &sys;
@@ -65,10 +62,7 @@ void MCMC::init(System &sys,
                          n_infections,
                          infection_times,
                          proposal_sd_mat[r],
-                         beta[r],
-                         start_time,
-                         end_time,
-                         max_infections);
+                         beta[r]);
   }
   
   // initialise counters

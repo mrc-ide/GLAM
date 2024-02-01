@@ -16,9 +16,6 @@ namespace writable = cpp11::writable;
 void Indiv::init(System &sys,
                  std::vector<std::vector<bool>> data_bool,
                  std::vector<double> obs_times,
-                 double start_time,
-                 double end_time,
-                 int max_infections,
                  int n_infections,
                  std::vector<double> infection_times) {
   
@@ -32,9 +29,9 @@ void Indiv::init(System &sys,
   n_obs = data[0].size();
   this->n_infections = n_infections;
   this->infection_times = infection_times;
-  this->start_time = start_time;
-  this->end_time = end_time;
-  this->max_infections = max_infections;
+  this->start_time = sys.start_time;
+  this->end_time = sys.end_time;
+  this->max_infections = sys.max_infections;
   
   // sanity checks on inputs
   if (infection_times.size() != n_infections) {
