@@ -14,6 +14,9 @@ class Indiv {
 public:
   // PUBLIC OBJECTS
   
+  // pointer to system object
+  System * sys;
+  
   std::vector<std::vector<bool>> data;
   int n_haplos;
   std::vector<double> obs_times;

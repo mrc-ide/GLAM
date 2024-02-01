@@ -19,6 +19,9 @@ void Indiv::init(System &sys,
                  int n_infections,
                  std::vector<double> infection_times) {
   
+  // pointer to system object
+  this->sys = &sys;
+  
   // initialise RNG
   rng_state = sys.rng_state;
   
@@ -49,6 +52,9 @@ void Indiv::init(System &sys,
 //------------------------------------------------
 // update number of infections
 void Indiv::update_n_infections() {
+  if (sys->n_infections_fixed) {
+    return;
+  }
   
   // dummy update step. Randomly drop or add infection
   if (runif1(rng_state) < 0.5) {  // add infection
@@ -81,6 +87,9 @@ void Indiv::update_n_infections() {
 //------------------------------------------------
 // update timings of all infections
 void Indiv::update_infection_times() {
+  if (sys->infection_times_fixed) {
+    return;
+  }
   
   // dummy update
   for (int i = 0; i < n_infections; ++i) {

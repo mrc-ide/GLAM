@@ -15,6 +15,7 @@ public:
   cpp11::list data_list;
   cpp11::list obs_time_list;
   cpp11::list param_list;
+  cpp11::list param_update_list;
   cpp11::list proposal_sd;
   int iteration_counter_init;
   cpp11::doubles beta;
@@ -25,6 +26,12 @@ public:
   
   int n_samp;
   int n_rungs;
+  bool lambda_fixed;
+  bool theta_fixed;
+  bool decay_rate_fixed;
+  bool sens_fixed;
+  bool n_infections_fixed;
+  bool infection_times_fixed;
   
   std::vector<std::vector<std::vector<bool>>> data_bool;
   std::vector<std::vector<double>> obs_time_vec;
@@ -37,6 +44,7 @@ public:
   void init(cpp11::list data_list,
             cpp11::list obs_time_list,
             cpp11::list param_list,
+            cpp11::list param_update_list,
             cpp11::list proposal_sd,
             int iteration_counter_init,
             cpp11::doubles beta,

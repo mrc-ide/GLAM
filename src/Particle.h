@@ -15,6 +15,9 @@ class Particle {
 public:
   // PUBLIC OBJECTS
   
+  // pointer to system object
+  System * sys;
+  
   // parameter values
   double lambda;
   double theta;

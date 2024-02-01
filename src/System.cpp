@@ -11,6 +11,7 @@ namespace writable = cpp11::writable;
 void System::init(cpp11::list data_list,
                  cpp11::list obs_time_list,
                  cpp11::list param_list,
+                 cpp11::list param_update_list,
                  cpp11::list proposal_sd,
                  int iteration_counter_init,
                  cpp11::doubles beta,
@@ -23,6 +24,7 @@ void System::init(cpp11::list data_list,
   this->data_list = data_list;
   this->obs_time_list = obs_time_list;
   this->param_list = param_list;
+  this->param_update_list = param_update_list;
   this->proposal_sd = proposal_sd;
   this->iteration_counter_init = iteration_counter_init;
   this->beta = beta;
@@ -63,5 +65,19 @@ void System::init(cpp11::list data_list,
       obs_time_vec[i][j] = tmp2[j];
     }
   }
+  
+  // get which params to update
+  logicals tmp = param_update_list["lambda_fixed"];
+  lambda_fixed = tmp[0];
+  tmp = param_update_list["theta_fixed"];
+  theta_fixed = tmp[0];
+  tmp = param_update_list["decay_rate_fixed"];
+  decay_rate_fixed = tmp[0];
+  tmp = param_update_list["sens_fixed"];
+  sens_fixed = tmp[0];
+  tmp = param_update_list["n_infections_fixed"];
+  n_infections_fixed = tmp[0];
+  tmp = param_update_list["infection_times_fixed"];
+  infection_times_fixed = tmp[0];
   
 }

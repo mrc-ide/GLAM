@@ -23,6 +23,9 @@ void Particle::init(System &sys,
                     std::vector<double> proposal_sd,
                     double beta) {
   
+  // pointer to system object
+  this->sys = &sys;
+  
   // initialise RNG
   rng_state = sys.rng_state;
   
@@ -83,6 +86,9 @@ void Particle::update() {
 //------------------------------------------------
 // update
 void Particle::update_lambda() {
+  if (sys->lambda_fixed) {
+    return;
+  }
   
   // dummy update
   double lambda_prop = rnorm1_pos(rng_state, lambda, proposal_sd_vec[0]);
@@ -105,16 +111,28 @@ void Particle::update_lambda() {
 //------------------------------------------------
 // update
 void Particle::update_theta() {
+  if (sys->theta_fixed) {
+    return;
+  }
+  
   theta = dust::random::random_real<double>(rng_state);
 }
 
 //------------------------------------------------
 // update
 void Particle::update_decay_rate() {
+  if (sys->decay_rate_fixed) {
+    return;
+  }
+  
   decay_rate = dust::random::random_real<double>(rng_state);
 }
 //------------------------------------------------
 // update
 void Particle::update_sens() {
+  if (sys->sens_fixed) {
+    return;
+  }
+  
   sens = dust::random::random_real<double>(rng_state);
 }

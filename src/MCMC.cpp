@@ -111,9 +111,6 @@ void MCMC::run_mcmc(bool burnin, int iterations) {
       progress.tick();
     }
     
-    double tmp_rand = rnorm1_pos(rng_state, 0, 1);
-    print(tmp_rand);
-    
     // mock updates
     for (int r = 0; r < n_rungs; ++r) {
       particle_vec[r].update();

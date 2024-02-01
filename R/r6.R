@@ -33,6 +33,7 @@ glam_mcmc <- R6::R6Class(
     rungs = NULL,
     max_infections = NULL,
     param_list = NULL,
+    param_update_list = NULL,
     proposal_sd = NULL,
     n_proposal_sd = NULL,
     rng_list = NULL,
@@ -205,6 +206,13 @@ glam_mcmc <- R6::R6Class(
       n_infections_fixed <- !is.null(n_infections)
       infection_times_fixed <- !is.null(infection_times)
       
+      param_update_list <- list(lambda_fixed = lambda_fixed,
+                                theta_fixed = theta_fixed,
+                                decay_rate_fixed = decay_rate_fixed,
+                                sens_fixed = sens_fixed,
+                                n_infections_fixed = n_infections_fixed,
+                                infection_times_fixed = infection_times_fixed)
+      
       # initialise parameters in nested list over chains and then rungs
       param_list <- list()
       for (i in 1:chains) {
@@ -285,6 +293,7 @@ glam_mcmc <- R6::R6Class(
       private$rungs <- rungs
       private$max_infections <- max_infections
       private$param_list <- param_list
+      private$param_update_list <- param_update_list
       private$proposal_sd <- proposal_sd
       private$n_proposal_sd <- n_proposal_sd
       private$rng_list <- rng_list
@@ -388,6 +397,7 @@ glam_mcmc <- R6::R6Class(
                                iterations,                                        # iterations
                                burnin,                                            # burnin
                                private$param_list[[chain]],                       # params
+                               private$param_update_list,                         # which params to update
                                private$proposal_sd[[chain]],                      # proposal_sd
                                private$iteration_counter[[chain]][[phase_name]],  # iteration_counter_init
                                rep(1, private$rungs),                             # beta
