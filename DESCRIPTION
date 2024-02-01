@@ -29,7 +29,8 @@ Imports:
     dplyr,
     ggplot2,
     dust,
-    R6
+    R6,
+    tidyr
 Remotes:
   mrc-ide/dust
 BugReports: https://github.com/mrc-ide/GLAM

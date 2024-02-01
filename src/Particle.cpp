@@ -13,20 +13,21 @@ namespace writable = cpp11::writable;
 
 //------------------------------------------------
 // constructor
-void Particle::init(double lambda,
+void Particle::init(System &sys,
+                    double lambda,
                     double theta,
                     double decay_rate,
                     double sens,
                     std::vector<int> n_infections,
+                    std::vector<std::vector<double>> infection_times,
                     std::vector<double> proposal_sd,
-                    double beta,
-                    double start_time,
-                    double end_time,
-                    cpp11::sexp rng_ptr) {
+                    double beta) {
+  
+  // pointer to system object
+  this->sys = &sys;
   
   // initialise RNG
-  auto rng = dust::random::r::rng_pointer_get<dust::random::xoshiro256plus>(rng_ptr);
-  rng_state = rng->state(0);
+  rng_state = sys.rng_state;
   
   // copy over known values
   this->lambda = lambda;
@@ -34,20 +35,22 @@ void Particle::init(double lambda,
   this->decay_rate = decay_rate;
   this->sens = sens;
   this->n_infections = n_infections;
-  this->start_time = start_time;
-  this->end_time = end_time;
+  this->infection_times = infection_times;
+  this->max_infections = sys.max_infections;
+  n_samp = n_infections.size();
   
+  // proposal_sd_vec goes through {lambda, theta, decay_rate, sens, infection_time}
   proposal_sd_vec = proposal_sd;
   n_proposal_sd = proposal_sd_vec.size();
   
-  // draw starting infection times
-  n_samp = n_infections.size();
-  infection_times = std::vector<std::vector<double>>(n_samp);
+  // initialise Indiv objects
+  indiv_vec = std::vector<Indiv>(n_samp, Indiv(rng_state));
   for (int i = 0; i < n_samp; ++i) {
-    infection_times[i] = std::vector<double>(n_infections[i]);
-    for (int j = 0; j < n_infections[i]; ++j) {
-      infection_times[i][j] = start_time + (end_time - start_time) * dust::random::random_real<double>(rng_state);
-    }
+    indiv_vec[i].init(sys,
+                      sys.data_bool[i],
+                      sys.obs_time_vec[i],
+                      n_infections[i],
+                      infection_times[i]);
   }
   
 }
@@ -56,13 +59,82 @@ void Particle::init(double lambda,
 // update
 void Particle::update() {
   
-  lambda = dust::random::random_real<double>(rng_state);
-  theta = dust::random::random_real<double>(rng_state);
+  //std::this_thread::sleep_for(std::chrono::milliseconds(1));
   
+  // split-merge update steps on all individuals
   for (int i = 0; i < n_samp; ++i) {
-    for (int j = 0; j < n_infections[i]; ++j) {
-      infection_times[i][j] = start_time + (end_time - start_time) * dust::random::random_real<double>(rng_state);
-    }
+    indiv_vec[i].update_n_infections();
   }
   
+  // update all infection times
+  for (int i = 0; i < n_samp; ++i) {
+    indiv_vec[i].update_infection_times();
+  }
+  
+  // store all infection times
+  for (int i = 0; i < n_samp; ++i) {
+    n_infections[i] = indiv_vec[i].get_n_infections();
+    infection_times[i] = indiv_vec[i].get_infection_times();
+  }
+  
+  // update global parameters
+  update_lambda();
+  update_theta();
+  update_decay_rate();
+  update_sens();
+  
+}
+
+//------------------------------------------------
+// update
+void Particle::update_lambda() {
+  if (sys->lambda_fixed) {
+    return;
+  }
+  
+  // dummy update
+  double lambda_prop = rnorm1_pos(rng_state, lambda, proposal_sd_vec[0]);
+  
+  double loglike = 0.0;
+  double loglike_prop = 0.0;
+  for (int i = 0; i < n_samp; ++i) {
+    loglike += indiv_vec[i].loglike_basic(lambda, theta, decay_rate, sens);
+    loglike_prop += indiv_vec[i].loglike_basic(lambda_prop, theta, decay_rate, sens);
+  }
+  
+  double MH = loglike_prop - loglike;
+  
+  if (log(runif1(rng_state)) < MH) {
+    lambda = lambda_prop;
+  }
+  
+}
+
+//------------------------------------------------
+// update
+void Particle::update_theta() {
+  if (sys->theta_fixed) {
+    return;
+  }
+  
+  theta = dust::random::random_real<double>(rng_state);
+}
+
+//------------------------------------------------
+// update
+void Particle::update_decay_rate() {
+  if (sys->decay_rate_fixed) {
+    return;
+  }
+  
+  decay_rate = dust::random::random_real<double>(rng_state);
+}
+//------------------------------------------------
+// update
+void Particle::update_sens() {
+  if (sys->sens_fixed) {
+    return;
+  }
+  
+  sens = dust::random::random_real<double>(rng_state);
 }

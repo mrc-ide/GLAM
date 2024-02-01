@@ -55,6 +55,7 @@ Define model parameters.
   decay_rate = NULL,
   sens = NULL,
   n_infections = NULL,
+  infection_times = NULL,
   haplo_freqs = NULL
 )}\if{html}{\out{</div>}}
 }
@@ -81,6 +82,8 @@ Define model parameters.
 \item{\code{sens}}{TODO}
 
 \item{\code{n_infections}}{TODO}
+
+\item{\code{infection_times}}{TODO}
 
 \item{\code{haplo_freqs}}{TODO}
 }

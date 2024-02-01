@@ -362,10 +362,10 @@ cpp11::writable::list array_int_to_list(std::vector<std::vector<std::vector<int>
 std::vector<std::vector<double>> list_to_mat_double(cpp11::list x) {
   std::vector<std::vector<double>> ret(x.size());
   for (int i = 0; i < x.size(); i++) {
-    cpp11::list xi = x[i];
+    cpp11::doubles xi = x[i];
     std::vector<double> v(xi.size());
     for (int j = 0; j < xi.size(); j++) {
-      v[j] = cpp11::as_cpp<double>(xi[j]);
+      v[j] = xi[j];
     }
     ret[i] = v;
   }
@@ -374,10 +374,10 @@ std::vector<std::vector<double>> list_to_mat_double(cpp11::list x) {
 std::vector<std::vector<int>> list_to_mat_int(cpp11::list x) {
   std::vector<std::vector<int>> ret(x.size());
   for (int i = 0; i < x.size(); i++) {
-    cpp11::list xi = x[i];
+    cpp11::integers xi = x[i];
     std::vector<int> v(xi.size());
     for (int j = 0; j < xi.size(); j++) {
-      v[j] = cpp11::as_cpp<int>(xi[j]);
+      v[j] = xi[j];
     }
     ret[i] = v;
   }

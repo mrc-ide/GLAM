@@ -10,17 +10,18 @@ using namespace cpp11;
 namespace writable = cpp11::writable;
 
 //------------------------------------------------
-// constructor
-MCMC::MCMC(cpp11::list param_list,
-           cpp11::list proposal_sd,
-           const int iteration_counter_init,
-           const cpp11::doubles beta,
-           const double start_time,
-           const double end_time,
-           cpp11::sexp rng_ptr) {
+// initialise
+void MCMC::init(System &sys,
+                cpp11::list param_list,
+                cpp11::list proposal_sd,
+                const int iteration_counter_init,
+                const cpp11::doubles beta) {
   
-  auto rng = dust::random::r::rng_pointer_get<dust::random::xoshiro256plus>(rng_ptr);
-  auto& state = rng->state(0);
+  // pointer to system object
+  this->sys = &sys;
+  
+  // initialise RNG
+  rng_state = sys.rng_state;
   
   n_rungs = beta.size();
   
@@ -29,7 +30,7 @@ MCMC::MCMC(cpp11::list param_list,
   n_proposal_sd = proposal_sd_mat[0].size();
   
   // initialise particles
-  particle_vec = std::vector<Particle>(n_rungs, Particle(state));
+  particle_vec = std::vector<Particle>(n_rungs, Particle(rng_state));
   for (int r = 0; r < n_rungs; ++r) {
     
     // extract parameters
@@ -49,16 +50,19 @@ MCMC::MCMC(cpp11::list param_list,
     integers tmp3 = tmp1["n_infections"];
     std::vector<int> n_infections = integers_to_vec(tmp3);
     
-    particle_vec[r].init(lambda,
+    list tmp4 = tmp1["infection_times"];
+    std::vector<std::vector<double>> infection_times = list_to_mat_double(tmp4);
+    
+    // pass parameters into particle
+    particle_vec[r].init(sys,
+                         lambda,
                          theta,
                          decay_rate,
                          sens,
                          n_infections,
+                         infection_times,
                          proposal_sd_mat[r],
-                         beta[r],
-                         start_time,
-                         end_time,
-                         rng_ptr);
+                         beta[r]);
   }
   
   // initialise counters
@@ -66,17 +70,11 @@ MCMC::MCMC(cpp11::list param_list,
   acceptance_out = std::vector<std::vector<int>>(n_rungs, std::vector<int>(n_proposal_sd));
   swap_acceptance_out = std::vector<int>(n_rungs - 1);
   
-  // dust initialise RNG
-  this->rng_ptr = rng_ptr;
-  
 }
 
 //------------------------------------------------
 // run MCMC loop
 void MCMC::run_mcmc(bool burnin, int iterations) {
-  
-  auto rng = dust::random::r::rng_pointer_get<dust::random::xoshiro256plus>(rng_ptr);
-  auto& state = rng->state(0);
   
   // objects for storing results
   lambda_store = std::vector<double>(iterations);
@@ -88,7 +86,7 @@ void MCMC::run_mcmc(bool burnin, int iterations) {
   
   // initialise progress bar
   RProgress::RProgress progress("Progress [:bar] Time remaining: :eta");
-  progress.set_total(100);
+  progress.set_total(iterations);
   
   // store values on first iteration
   int start_i = 0;
@@ -107,11 +105,7 @@ void MCMC::run_mcmc(bool burnin, int iterations) {
   
   // run loop
   for (int i = start_i; i < iterations; ++i) {
-    
-    int remainder = i % int(ceil(double(iterations) / 100));
-    if ((remainder == 0) || ((i + 1) == iterations)) {
-      progress.tick();
-    }
+    progress.tick();
     
     // mock updates
     for (int r = 0; r < n_rungs; ++r) {
@@ -132,6 +126,19 @@ void MCMC::run_mcmc(bool burnin, int iterations) {
     infection_times_store[i] = particle_vec[0].infection_times;
     
     iteration_counter++;
+  }
+  
+  // store final state
+  for (int r = 0; r < n_rungs; ++r) {
+    writable::list tmp({
+      "lambda"_nm = particle_vec[r].lambda,
+      "theta"_nm = particle_vec[r].theta,
+      "decay_rate"_nm = particle_vec[r].decay_rate,
+      "sens"_nm = particle_vec[r].sens,
+      "n_infections"_nm = particle_vec[r].n_infections,
+      "infection_times"_nm = mat_double_to_list(particle_vec[r].infection_times)
+    });
+    param_list_out.push_back(tmp);
   }
   
 }
