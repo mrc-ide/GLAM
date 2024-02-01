@@ -86,7 +86,7 @@ void MCMC::run_mcmc(bool burnin, int iterations) {
   
   // initialise progress bar
   RProgress::RProgress progress("Progress [:bar] Time remaining: :eta");
-  progress.set_total(100);
+  progress.set_total(iterations);
   
   // store values on first iteration
   int start_i = 0;
@@ -105,11 +105,7 @@ void MCMC::run_mcmc(bool burnin, int iterations) {
   
   // run loop
   for (int i = start_i; i < iterations; ++i) {
-    
-    int remainder = i % int(ceil(double(iterations) / 100));
-    if ((remainder == 0) || ((i + 1) == iterations)) {
-      progress.tick();
-    }
+    progress.tick();
     
     // mock updates
     for (int r = 0; r < n_rungs; ++r) {

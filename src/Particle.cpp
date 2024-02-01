@@ -59,6 +59,8 @@ void Particle::init(System &sys,
 // update
 void Particle::update() {
   
+  //std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  
   // split-merge update steps on all individuals
   for (int i = 0; i < n_samp; ++i) {
     indiv_vec[i].update_n_infections();
