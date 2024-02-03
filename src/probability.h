@@ -11,6 +11,9 @@
 double runif1(dust::random::xoshiro256plus& rng_state, double min = 0.0, double max = 1.0);
 
 //------------------------------------------------
+bool rbernoulli1(dust::random::xoshiro256plus& rng_state, double p);
+
+//------------------------------------------------
 int sample2(dust::random::xoshiro256plus& rng_state, int a, int b);
 
 //------------------------------------------------

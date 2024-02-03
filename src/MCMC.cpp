@@ -14,7 +14,6 @@ namespace writable = cpp11::writable;
 void MCMC::init(System &sys,
                 cpp11::list param_list,
                 cpp11::list proposal_sd,
-                const int iteration_counter_init,
                 const cpp11::doubles beta) {
   
   // pointer to system object
@@ -66,7 +65,7 @@ void MCMC::init(System &sys,
   }
   
   // initialise counters
-  iteration_counter = iteration_counter_init + 1;
+  iteration_counter = sys.iteration_counter_init + 1;
   acceptance_out = std::vector<std::vector<int>>(n_rungs, std::vector<int>(n_proposal_sd));
   swap_acceptance_out = std::vector<int>(n_rungs - 1);
   

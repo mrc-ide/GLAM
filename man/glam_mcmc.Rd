@@ -18,6 +18,7 @@ Create a new glam_mcmc object to run an MCMC.
 \item \href{#method-glam_mcmc-get_output_n_infections}{\code{glam_mcmc$get_output_n_infections()}}
 \item \href{#method-glam_mcmc-get_output_infection_times}{\code{glam_mcmc$get_output_infection_times()}}
 \item \href{#method-glam_mcmc-print}{\code{glam_mcmc$print()}}
+\item \href{#method-glam_mcmc-debug_algo1}{\code{glam_mcmc$debug_algo1()}}
 \item \href{#method-glam_mcmc-clone}{\code{glam_mcmc$clone()}}
 }
 }
@@ -194,6 +195,15 @@ Run sampling MCMC
 Print MCMC object summary
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{glam_mcmc$print()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-glam_mcmc-debug_algo1"></a>}}
+\if{latex}{\out{\hypertarget{method-glam_mcmc-debug_algo1}{}}}
+\subsection{Method \code{debug_algo1()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{glam_mcmc$debug_algo1()}\if{html}{\out{</div>}}
 }
 
 }

@@ -6,16 +6,25 @@
 #include <R_ext/Visibility.h>
 
 // main.cpp
-list mcmc_cpp(cpp11::list data_list, cpp11::list obs_time_list, const int iterations, const bool burnin, list param_list, list param_update_list, list proposal_sd, const int iteration_counter_init, const doubles beta, double start_time, double end_time, int max_infections, cpp11::sexp rng_ptr);
-extern "C" SEXP _GLAM_mcmc_cpp(SEXP data_list, SEXP obs_time_list, SEXP iterations, SEXP burnin, SEXP param_list, SEXP param_update_list, SEXP proposal_sd, SEXP iteration_counter_init, SEXP beta, SEXP start_time, SEXP end_time, SEXP max_infections, SEXP rng_ptr) {
+list mcmc_cpp(cpp11::list data_list, cpp11::list obs_time_list, const doubles haplo_freqs, const int iterations, const bool burnin, list param_list, list param_update_list, list proposal_sd, const int iteration_counter_init, const doubles beta, double start_time, double end_time, int max_infections, cpp11::sexp rng_ptr);
+extern "C" SEXP _GLAM_mcmc_cpp(SEXP data_list, SEXP obs_time_list, SEXP haplo_freqs, SEXP iterations, SEXP burnin, SEXP param_list, SEXP param_update_list, SEXP proposal_sd, SEXP iteration_counter_init, SEXP beta, SEXP start_time, SEXP end_time, SEXP max_infections, SEXP rng_ptr) {
   BEGIN_CPP11
-    return cpp11::as_sexp(mcmc_cpp(cpp11::as_cpp<cpp11::decay_t<cpp11::list>>(data_list), cpp11::as_cpp<cpp11::decay_t<cpp11::list>>(obs_time_list), cpp11::as_cpp<cpp11::decay_t<const int>>(iterations), cpp11::as_cpp<cpp11::decay_t<const bool>>(burnin), cpp11::as_cpp<cpp11::decay_t<list>>(param_list), cpp11::as_cpp<cpp11::decay_t<list>>(param_update_list), cpp11::as_cpp<cpp11::decay_t<list>>(proposal_sd), cpp11::as_cpp<cpp11::decay_t<const int>>(iteration_counter_init), cpp11::as_cpp<cpp11::decay_t<const doubles>>(beta), cpp11::as_cpp<cpp11::decay_t<double>>(start_time), cpp11::as_cpp<cpp11::decay_t<double>>(end_time), cpp11::as_cpp<cpp11::decay_t<int>>(max_infections), cpp11::as_cpp<cpp11::decay_t<cpp11::sexp>>(rng_ptr)));
+    return cpp11::as_sexp(mcmc_cpp(cpp11::as_cpp<cpp11::decay_t<cpp11::list>>(data_list), cpp11::as_cpp<cpp11::decay_t<cpp11::list>>(obs_time_list), cpp11::as_cpp<cpp11::decay_t<const doubles>>(haplo_freqs), cpp11::as_cpp<cpp11::decay_t<const int>>(iterations), cpp11::as_cpp<cpp11::decay_t<const bool>>(burnin), cpp11::as_cpp<cpp11::decay_t<list>>(param_list), cpp11::as_cpp<cpp11::decay_t<list>>(param_update_list), cpp11::as_cpp<cpp11::decay_t<list>>(proposal_sd), cpp11::as_cpp<cpp11::decay_t<const int>>(iteration_counter_init), cpp11::as_cpp<cpp11::decay_t<const doubles>>(beta), cpp11::as_cpp<cpp11::decay_t<double>>(start_time), cpp11::as_cpp<cpp11::decay_t<double>>(end_time), cpp11::as_cpp<cpp11::decay_t<int>>(max_infections), cpp11::as_cpp<cpp11::decay_t<cpp11::sexp>>(rng_ptr)));
+  END_CPP11
+}
+// main.cpp
+void debug_algo1_cpp(cpp11::list data_list, cpp11::list obs_time_list, const doubles haplo_freqs, list param_list, list param_update_list, list proposal_sd, const doubles beta, double start_time, double end_time, int max_infections, cpp11::sexp rng_ptr);
+extern "C" SEXP _GLAM_debug_algo1_cpp(SEXP data_list, SEXP obs_time_list, SEXP haplo_freqs, SEXP param_list, SEXP param_update_list, SEXP proposal_sd, SEXP beta, SEXP start_time, SEXP end_time, SEXP max_infections, SEXP rng_ptr) {
+  BEGIN_CPP11
+    debug_algo1_cpp(cpp11::as_cpp<cpp11::decay_t<cpp11::list>>(data_list), cpp11::as_cpp<cpp11::decay_t<cpp11::list>>(obs_time_list), cpp11::as_cpp<cpp11::decay_t<const doubles>>(haplo_freqs), cpp11::as_cpp<cpp11::decay_t<list>>(param_list), cpp11::as_cpp<cpp11::decay_t<list>>(param_update_list), cpp11::as_cpp<cpp11::decay_t<list>>(proposal_sd), cpp11::as_cpp<cpp11::decay_t<const doubles>>(beta), cpp11::as_cpp<cpp11::decay_t<double>>(start_time), cpp11::as_cpp<cpp11::decay_t<double>>(end_time), cpp11::as_cpp<cpp11::decay_t<int>>(max_infections), cpp11::as_cpp<cpp11::decay_t<cpp11::sexp>>(rng_ptr));
+    return R_NilValue;
   END_CPP11
 }
 
 extern "C" {
 static const R_CallMethodDef CallEntries[] = {
-    {"_GLAM_mcmc_cpp", (DL_FUNC) &_GLAM_mcmc_cpp, 13},
+    {"_GLAM_debug_algo1_cpp", (DL_FUNC) &_GLAM_debug_algo1_cpp, 11},
+    {"_GLAM_mcmc_cpp",        (DL_FUNC) &_GLAM_mcmc_cpp,        14},
     {NULL, NULL, 0}
 };
 }

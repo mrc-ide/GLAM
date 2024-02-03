@@ -1,8 +1,6 @@
 
 #include <chrono>
 #include <thread>
-
-
 #include <cpp11.hpp>
 #include <dust/r/random.hpp>
 #include <dust/random/normal.hpp>
@@ -29,6 +27,7 @@ void Indiv::init(System &sys,
   data = data_bool;
   n_haplos = data.size();
   this->obs_times = obs_times;
+  haplo_freqs = sys.haplo_freqs;
   n_obs = data[0].size();
   this->n_infections = n_infections;
   this->infection_times = infection_times;
@@ -47,6 +46,9 @@ void Indiv::init(System &sys,
   // main alleles array. Initialise with all alleles introduced (must be at least one introduced)
   infection_alleles = std::vector<std::vector<bool>>(n_infections, std::vector<bool>(n_haplos, true));
   
+  // vectors for storing success and failure from algorithm1
+  S_vec = std::vector<double>(n_haplos);
+  F_vec = std::vector<double>(n_haplos);
 }
 
 //------------------------------------------------
@@ -86,22 +88,191 @@ void Indiv::update_n_infections() {
 
 //------------------------------------------------
 // update timings of all infections
-void Indiv::update_infection_times() {
+void Indiv::update_infection_times(double lambda, double theta, double decay_rate, double sens) {
   if (sys->infection_times_fixed) {
     return;
   }
   
-  // dummy update
-  for (int i = 0; i < n_infections; ++i) {
-    infection_times[i] = runif1(rng_state, start_time, end_time);
+  std::vector<double> infection_times_prop = infection_times;
+  for (int k = 0; k < n_infections; ++k) {
+    
+    // propose new value
+    infection_times_prop[k] = rnorm1_interval(rng_state, infection_times[k], 3, start_time, end_time);
+    
+    // calculate loglikelihood of current and proposed state
+    double loglike_now = loglike_marginal_k(k, lambda, theta, decay_rate, sens, infection_times);
+    double loglike_prop = loglike_marginal_k(k, lambda, theta, decay_rate, sens, infection_times_prop);
+    
+    // calculate Metropolis-Hastings ratio
+    double MH = loglike_prop - loglike_now;
+    bool accept_move = (log(runif1(rng_state)) < MH);
+    
+    // accept or reject move
+    if (accept_move) {
+      infection_times[k] = infection_times_prop[k];
+      
+      // Gibbs sample introduced haplos given new timings
+      update_w_mat_k(k, lambda, theta, decay_rate, sens);
+    } else {
+      infection_times_prop[k] = infection_times[k];
+    }
   }
   
+}
+
+//------------------------------------------------
+// log-likelihood marginalised over the kth infection
+double Indiv::loglike_marginal_k(int k, double lambda, double theta, double decay_rate, double sens,
+                                 std::vector<double> &inf_times) {
+  
+  // populate vectors of success and failure probabilities
+  for (int j = 0; j < n_haplos; ++j) {
+    S_vec[j] = algorithm1(j, lambda, theta, decay_rate, sens, inf_times, k, true);
+    F_vec[j] = algorithm1(j, lambda, theta, decay_rate, sens, inf_times, k, false);
+  }
+  
+  double l1 = 0;
+  double l2 = -theta;
+  for (int j = 0; j < n_haplos; ++j) {
+    double q = 1.0 - exp(-theta * haplo_freqs[j]);
+    l1 += log(q*S_vec[j] + (1.0 - q)*F_vec[j]);
+    l2 += log(F_vec[j]);
+  }
+  double ret = l1 + log(1.0 - exp(l2 - l1));
+  ret -= log(1.0 - exp(-theta));
+  
+  return ret;
+}
+
+//------------------------------------------------
+// Gibbs sampler on W matrix
+void Indiv::update_w_mat(double lambda, double theta, double decay_rate, double sens) {
+  for (int k = 0; k < n_infections; ++k) {
+    update_w_mat_k(k, lambda, theta, decay_rate, sens);
+  }
+}
+
+//------------------------------------------------
+// Gibbs sampler on kth infection of W matrix
+void Indiv::update_w_mat_k(int k, double lambda, double theta, double decay_rate, double sens) {
+  
+  // populate vectors of success and failure probabilities
+  for (int j = 0; j < n_haplos; ++j) {
+    S_vec[j] = algorithm1(j, lambda, theta, decay_rate, sens, infection_times, k, true);
+    F_vec[j] = algorithm1(j, lambda, theta, decay_rate, sens, infection_times, k, false);
+  }
+  
+  // update each haplo in turn
+  bool no_success = true;
+  for (int j = 0; j < n_haplos; ++j) {
+    
+    // calculate basic probability
+    double q = 1.0 - exp(-theta * haplo_freqs[j]);
+    double prob_success = q*S_vec[j] / (q*S_vec[j] + (1 - q)*F_vec[j]);
+    
+    // modify probability if no success seen so far
+    if (no_success) {
+      double log_a = 0.0;
+      double log_b = 0.0;
+      for (int l = j; l < n_haplos; ++l) {
+        double ql = 1.0 - exp(-theta * haplo_freqs[l]);
+        log_a += log(ql*S_vec[l] + (1 - ql)*F_vec[l]);
+        log_b += log((1 - ql)*F_vec[l]);
+      }
+      prob_success /= (1.0 - exp(log_b - log_a));
+    }
+    
+    // draw new value of whether haplo introduced
+    infection_alleles[k][j] = rbernoulli1(rng_state, prob_success);
+    if (infection_alleles[k][j]) {
+      no_success = false;
+    }
+  }
 }
 
 //------------------------------------------------
 // basic log-likelihood, no marginalisation
 double Indiv::loglike_basic(double lambda, double theta, double decay_rate, double sens) {
   return 0.0;
+}
+
+//------------------------------------------------
+// Algorithm1 (see math notes)
+double Indiv::algorithm1(int haplo_i, double lambda, double theta, double decay_rate, double sens,
+                         std::vector<double> &inf_times, int override_k, bool override_value) {
+  
+  int n_inf = inf_times.size();
+  double p = sys->haplo_freqs[haplo_i];
+  double q = 1.0 - exp(-theta*p);
+  double prob_equilib = lambda*q / (lambda*q + decay_rate);
+  double prob_given_pos = data[haplo_i][0]*sens + (1 - data[haplo_i][0])*(1 - sens);
+  double prob_given_neg = 1 - data[haplo_i][0];
+  double A = prob_equilib * prob_given_pos;
+  double B = (1 - prob_equilib) * prob_given_neg;
+  
+#ifdef DEBUG_ALGO1
+  print("infection times:");
+  print_vector(inf_times);
+  std::stringstream ss;
+  ss << "init:        " << A << " " << B;
+  cpp11::message(ss.str());
+#endif
+  
+  int i = 1;
+  int c = 0;
+  double tau = start_time;
+  bool next_is_infection = false;
+  while (tau < end_time) {
+    
+    // work out if next event is an infection or an observation
+    if ((n_inf == 0) || (c == n_inf)) {
+      next_is_infection = false;
+    } else {
+      if (obs_times[i] < inf_times[c]) {
+        next_is_infection = false;
+      } else {
+        next_is_infection = true;
+      }
+    }
+    
+    // implement changes
+    if (next_is_infection) {
+      bool w = infection_alleles[c][haplo_i];
+      if (c == override_k) {
+        w = override_value;
+      }
+      double T11 = exp(-decay_rate * (inf_times[c] - tau));
+      double A_new = w*(A + B) + (1 - w)*A*T11;
+      double B_new = (1 - w)*(A*(1 - T11) + B);
+      A = A_new;
+      B = B_new;
+      tau = inf_times[c];
+      c++;
+    } else {
+      double T11 = exp(-decay_rate * (obs_times[i] - tau));
+      double prob_given_pos = data[haplo_i][i]*sens + (1 - data[haplo_i][i])*(1 - sens);
+      double prob_given_neg = 1 - data[haplo_i][i];
+      double A_new = A*T11*prob_given_pos;
+      double B_new = (A*(1 - T11) + B)*prob_given_neg;
+      A = A_new;
+      B = B_new;
+      tau = obs_times[i];
+      i++;
+    }
+    
+#ifdef DEBUG_ALGO1
+    std::stringstream ss;
+    if (next_is_infection) {
+      ss << "infection:   ";
+    } else {
+      ss << "observation: ";
+    }
+    ss << A << " " << B;
+    cpp11::message(ss.str());
+#endif
+  }
+  
+  return A + B;
 }
 
 //------------------------------------------------

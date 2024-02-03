@@ -1,8 +1,6 @@
 
 #include <chrono>
 #include <thread>
-
-
 #include <cpp11.hpp>
 #include <dust/r/random.hpp>
 #include <dust/random/normal.hpp>
@@ -53,6 +51,13 @@ void Particle::init(System &sys,
                       infection_times[i]);
   }
   
+#ifdef DEBUG_ALGO1
+  double tmp = indiv_vec[0].algorithm1(0, lambda, theta, decay_rate, sens,
+                                       -1, false);
+  print("result:", tmp);
+  stop("end debugging");
+#endif
+  
 }
 
 //------------------------------------------------
@@ -68,7 +73,12 @@ void Particle::update() {
   
   // update all infection times
   for (int i = 0; i < n_samp; ++i) {
-    indiv_vec[i].update_infection_times();
+    indiv_vec[i].update_infection_times(lambda, theta, decay_rate, sens);
+  }
+  
+  // Gibbs sample W matrix
+  for (int i = 0; i < n_samp; ++i) {
+    indiv_vec[i].update_w_mat(lambda, theta, decay_rate, sens);
   }
   
   // store all infection times

@@ -53,7 +53,6 @@ public:
   void init(System &sys,
             cpp11::list param_list,
             cpp11::list proposal_sd,
-            const int iteration_counter_init,
             const cpp11::doubles beta);
   
   void run_mcmc(bool burnin, int interations);

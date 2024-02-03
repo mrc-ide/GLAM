@@ -10,6 +10,7 @@ namespace writable = cpp11::writable;
 // initialise
 void System::init(cpp11::list data_list,
                  cpp11::list obs_time_list,
+                 const cpp11::doubles haplo_freqs,
                  cpp11::list param_list,
                  cpp11::list param_update_list,
                  cpp11::list proposal_sd,
@@ -64,6 +65,12 @@ void System::init(cpp11::list data_list,
     for (int j = 0; j < tmp2.size(); ++j) {
       obs_time_vec[i][j] = tmp2[j];
     }
+  }
+  
+  // get haplo_freqs into std vector
+  this->haplo_freqs = std::vector<double>(haplo_freqs.size());
+  for (int i = 0; i < haplo_freqs.size(); ++i) {
+    this->haplo_freqs[i] = haplo_freqs[i];
   }
   
   // get which params to update
