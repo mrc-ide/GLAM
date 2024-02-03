@@ -9,6 +9,13 @@ double runif1(dust::random::xoshiro256plus& rng_state, double min, double max) {
 }
 
 //------------------------------------------------
+// single Bernoulli draw
+bool rbernoulli1(dust::random::xoshiro256plus& rng_state, double p) {
+  bool ret = runif1(rng_state) < p;
+  return ret;
+}
+
+//------------------------------------------------
 // sample single value x that lies between a and b (inclusive) with equal
 // probability
 int sample2(dust::random::xoshiro256plus& rng_state, int a, int b) {

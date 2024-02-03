@@ -8,9 +8,11 @@ using namespace cpp11;
 namespace writable = cpp11::writable;
 
 //------------------------------------------------
+// main MCMC function
 [[cpp11::register]]
 list mcmc_cpp(cpp11::list data_list,
               cpp11::list obs_time_list,
+              const doubles haplo_freqs,
               const int iterations,
               const bool burnin,
               list param_list,
@@ -35,6 +37,7 @@ list mcmc_cpp(cpp11::list data_list,
   System sys(rng_state);
   sys.init(data_list,
            obs_time_list,
+           haplo_freqs,
            param_list,
            param_update_list,
            proposal_sd,
@@ -50,7 +53,6 @@ list mcmc_cpp(cpp11::list data_list,
   mcmc.init(sys,
             param_list,
             proposal_sd,
-            iteration_counter_init,
             beta);
   
   // run main loop
@@ -80,4 +82,47 @@ list mcmc_cpp(cpp11::list data_list,
     "dur"_nm = dur,
     "rng_ptr"_nm = rng_ptr
   });
+}
+
+//------------------------------------------------
+// debug algorithm 1
+[[cpp11::register]]
+void debug_algo1_cpp(cpp11::list data_list,
+                     cpp11::list obs_time_list,
+                     const doubles haplo_freqs,
+                     list param_list,
+                     list param_update_list,
+                     list proposal_sd,
+                     const doubles beta,
+                     double start_time,
+                     double end_time,
+                     int max_infections,
+                     cpp11::sexp rng_ptr) {
+  
+  // initialise RNG state
+  auto rng = dust::random::r::rng_pointer_get<dust::random::xoshiro256plus>(rng_ptr);
+  dust::random::xoshiro256plus& rng_state = rng->state(0);
+  
+  // create system object to hold all input values. This makes it easier when
+  // passing objects around between classes
+  System sys(rng_state);
+  sys.init(data_list,
+           obs_time_list,
+           haplo_freqs,
+           param_list,
+           param_update_list,
+           proposal_sd,
+           0,
+           beta,
+           start_time,
+           end_time,
+           max_infections,
+           rng_ptr);
+  
+  // initialise MCMC, which will run the debugging step
+  MCMC mcmc(sys.rng_state);
+  mcmc.init(sys,
+            param_list,
+            proposal_sd,
+            beta);
 }

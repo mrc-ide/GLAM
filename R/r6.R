@@ -186,15 +186,15 @@ glam_mcmc <- R6::R6Class(
           message("Defining n_infections from infection_times")
           n_infections <- mapply(length, infection_times) # define n_infections from infection_times
         } else {
-          assert_eq(mapply(length, infection_times_true), n_infections, message = "If both n_infections and infection_times are defined then the lengths of infection_times must match the values in n_infections")
+          assert_eq(mapply(length, infection_times), n_infections, message = "If both n_infections and infection_times are defined then the lengths of infection_times must match the values in n_infections")
         }
         mapply(function(x) {
           assert_vector_bounded(x, left = start_time, right = end_time, message = "Infection times must be within the window defined by start_time and end_time")
-        }, infection_times_true)
+        }, infection_times)
       }
       if (!is.null(haplo_freqs)) {
         assert_vector_bounded(haplo_freqs)
-        assert_length(n_infections, private$n_haplos, message = sprintf("Must define %s haplotype frequencies to match the number found in the data"))
+        assert_length(haplo_freqs, private$n_haplos, message = sprintf("Must define %s haplotype frequencies to match the number found in the data", private$n_haplos))
         assert_eq(sum(haplo_freqs), 1)
       }
       
@@ -370,6 +370,7 @@ glam_mcmc <- R6::R6Class(
                            silent = silent)
     },
     
+    #--------------------
     #' @param burnin TODO
     #' @param iterations TODO
     #' @param target_acceptance TODO
@@ -394,6 +395,7 @@ glam_mcmc <- R6::R6Class(
         # run this chain
         output_raw <- mcmc_cpp(private$list_data,                                 # data in list format
                                private$obs_time_list,                             # observation times
+                               private$haplo_freqs,                               # haplo freqs
                                iterations,                                        # iterations
                                burnin,                                            # burnin
                                private$param_list[[chain]],                       # params
@@ -435,6 +437,7 @@ glam_mcmc <- R6::R6Class(
       
     },
     
+    #--------------------
     get_output_global = function() {
       
       ret <- mapply(function(i) {
@@ -459,6 +462,7 @@ glam_mcmc <- R6::R6Class(
       return(ret)
     },
     
+    #--------------------
     get_output_n_infections = function() {
       
       ret <- mapply(function(i) {
@@ -482,6 +486,7 @@ glam_mcmc <- R6::R6Class(
       return(ret)
     },
     
+    #--------------------
     get_output_infection_times = function() {
       
       seq_len_V <- Vectorize(function(n) seq_len(n), SIMPLIFY = FALSE)
@@ -540,6 +545,23 @@ glam_mcmc <- R6::R6Class(
       
       # return invisibly
       invisible(self)
+    },
+    
+    #--------------------
+    debug_algo1 = function() {
+      chain <- 1
+      debug_algo1_cpp(private$list_data,                                 # data in list format
+                      private$obs_time_list,                             # observation times
+                      private$haplo_freqs,                               # haplo freqs
+                      private$param_list[[chain]],                       # params
+                      private$param_update_list,                         # which params to update
+                      private$proposal_sd[[chain]],                      # proposal_sd
+                      rep(1, private$rungs),                             # beta
+                      private$start_time,                                # start_time
+                      private$end_time,                                  # end_time
+                      private$max_infections,                            # max infections
+                      private$rng_list[[chain]])                         # rng_ptr
     }
+    
   )
 )
