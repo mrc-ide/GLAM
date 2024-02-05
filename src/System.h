@@ -37,7 +37,6 @@ public:
   std::vector<std::vector<double>> obs_time_vec;
   std::vector<double> haplo_freqs;
   
-  
   // PUBLIC FUNCTIONS
   
   // constructors

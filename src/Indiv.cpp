@@ -197,7 +197,7 @@ double Indiv::loglike_basic(double lambda, double theta, double decay_rate, doub
 }
 
 //------------------------------------------------
-// Algorithm1 (see math notes)
+// algorithm1 (see math notes)
 double Indiv::algorithm1(int haplo_i, double lambda, double theta, double decay_rate, double sens,
                          std::vector<double> &inf_times, int override_k, bool override_value) {
   
