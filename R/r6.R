@@ -79,6 +79,13 @@ glam_mcmc <- R6::R6Class(
       # input checks
       assert_dataframe(df_data)
       
+      # convert ind to factor
+      df_data <- df_data |>
+        dplyr::mutate(ind = factor(ind, levels = unique(ind)))
+      if (!all(sort(df_data$ind) == df_data$ind)) {
+        stop("data must be ordered by the ind column")
+      }
+      
       message("Loading data")
       
       # get sample info
@@ -138,6 +145,7 @@ glam_mcmc <- R6::R6Class(
     #' @param n_infections TODO
     #' @param infection_times TODO
     #' @param haplo_freqs TODO
+    #' @param w_list TODO
     init = function(start_time,
                     end_time,
                     chains = 5,
@@ -149,7 +157,8 @@ glam_mcmc <- R6::R6Class(
                     sens = NULL,
                     n_infections = NULL,
                     infection_times = NULL,
-                    haplo_freqs = NULL
+                    haplo_freqs = NULL,
+                    w_list = NULL
                     ) {
       
       # check inputs
@@ -197,6 +206,33 @@ glam_mcmc <- R6::R6Class(
         assert_length(haplo_freqs, private$n_haplos, message = sprintf("Must define %s haplotype frequencies to match the number found in the data", private$n_haplos))
         assert_eq(sum(haplo_freqs), 1)
       }
+      if (!is.null(w_list)) {
+        assert_list(w_list)
+        assert_length(w_list, private$n_samp, message = sprintf("w_list must be of length %s to match the number of samples found in the data", private$n_samp))
+        if (is.null(n_infections)) {
+          message("Defining n_infections from w_list")
+          n_infections <- mapply(nrow, w_list) # define n_infections from w_list
+        } else {
+          assert_eq(mapply(function(x) ifelse(is.null(x), 0, nrow(x)), w_list), n_infections, message = "If both n_infections and w_list are defined then the number of rows in w_list must match the values in n_infections")
+        }
+        mapply(function(x) {
+          if (!is.null(x)) {
+            assert_matrix(x)
+            assert_logical(x)
+          }
+        }, w_list)
+      }
+      
+      # reformat w_list to list of lists, not list of matrices
+      if (!is.null(w_list)) {
+        w_list <- mapply(function(x) {
+          if (is.null(x)) {
+            list()
+          } else {
+            apply(x, 1, function(y) y, simplify = FALSE)
+          }
+        }, w_list, SIMPLIFY = FALSE)
+      }
       
       # which parameters need updating
       lambda_fixed <- !is.null(lambda)
@@ -205,13 +241,15 @@ glam_mcmc <- R6::R6Class(
       sens_fixed <- !is.null(sens)
       n_infections_fixed <- !is.null(n_infections)
       infection_times_fixed <- !is.null(infection_times)
+      w_list_fixed <- !is.null(w_list)
       
       param_update_list <- list(lambda_fixed = lambda_fixed,
                                 theta_fixed = theta_fixed,
                                 decay_rate_fixed = decay_rate_fixed,
                                 sens_fixed = sens_fixed,
                                 n_infections_fixed = n_infections_fixed,
-                                infection_times_fixed = infection_times_fixed)
+                                infection_times_fixed = infection_times_fixed,
+                                w_list_fixed = w_list_fixed)
       
       # initialise parameters in nested list over chains and then rungs
       param_list <- list()
@@ -233,6 +271,11 @@ glam_mcmc <- R6::R6Class(
               infection_times[[k]] <- sort(runif(n_infections[k], min = start_time, max = end_time))
             }
           }
+          if (!w_list_fixed) {
+            w_list <- mapply(function(n) {
+              replicate(n, sample(c(TRUE, FALSE), private$n_haplos, replace = TRUE), simplify = FALSE)
+            }, n_infections, SIMPLIFY = FALSE)
+          }
           
           param_list[[i]][[j]] <- list(
             lambda = lambda,
@@ -240,7 +283,8 @@ glam_mcmc <- R6::R6Class(
             decay_rate = decay_rate,
             sens = sens,
             n_infections = n_infections,
-            infection_times = infection_times
+            infection_times = infection_times,
+            w_list = w_list
             )
         }
       }

@@ -57,7 +57,8 @@ Define model parameters.
   sens = NULL,
   n_infections = NULL,
   infection_times = NULL,
-  haplo_freqs = NULL
+  haplo_freqs = NULL,
+  w_list = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -87,6 +88,8 @@ Define model parameters.
 \item{\code{infection_times}}{TODO}
 
 \item{\code{haplo_freqs}}{TODO}
+
+\item{\code{w_list}}{TODO}
 }
 \if{html}{\out{</div>}}
 }

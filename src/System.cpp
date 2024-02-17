@@ -86,5 +86,7 @@ void System::init(cpp11::list data_list,
   n_infections_fixed = tmp[0];
   tmp = param_update_list["infection_times_fixed"];
   infection_times_fixed = tmp[0];
+  tmp = param_update_list["w_list_fixed"];
+  w_list_fixed = tmp[0];
   
 }

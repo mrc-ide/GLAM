@@ -48,15 +48,17 @@ public:
             std::vector<std::vector<bool>> data_bool,
             std::vector<double> obs_times,
             int n_infections,
-            std::vector<double> infection_times);
+            std::vector<double> infection_times,
+            std::vector<std::vector<bool>> infection_alleles);
   
   void update_n_infections();
   void update_infection_times(double lambda, double theta, double decay_rate, double sens);
-  double loglike_marginal_k(int k, double lambda, double theta, double decay_rate, double sens,
+  double get_loglike_marginal_k(int k, double lambda, double theta, double decay_rate, double sens,
                             std::vector<double> &inf_times);
   void update_w_mat(double lambda, double theta, double decay_rate, double sens);
   void update_w_mat_k(int k, double lambda, double theta, double decay_rate, double sens);
-  double loglike_basic(double lambda, double theta, double decay_rate, double sens);
+  double get_loglike_w(std::vector<double> &log_prob_pos, std::vector<double> &log_prob_neg, double log_norm);
+  double get_loglike_forward(double lambda, double theta, double decay_rate, double sens);
   double algorithm1(int haplo_i, double lambda, double theta, double decay_rate, double sens,
                     std::vector<double> &inf_times, int override_k, bool override_value);
   int get_n_infections();

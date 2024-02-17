@@ -13,6 +13,7 @@ sim_ind(
   sens,
   ind_name = "ind1",
   n_inf = NULL,
+  t_inf = NULL,
   return_full = FALSE
 )
 }
@@ -34,6 +35,10 @@ Must be at least two unique time points increasing in value.}
 
 \item{n_inf}{if \code{NULL} then number of infections is drawn from the
 model, but this parameter can also be used to manually set this value.}
+
+\item{t_inf}{if \code{NULL} then timings of infections are drawn from the
+model, but this parameter can also be used to manually set these values in
+a manual vector.}
 
 \item{return_full}{Boolean (Default \code{FALSE}). If \code{TRUE} then
 return true values of hidden variables alongside observed data.}

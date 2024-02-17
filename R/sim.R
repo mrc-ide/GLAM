@@ -22,6 +22,9 @@
 #' @param ind_name the name given to this individual in the returned data.frame.
 #' @param n_inf if \code{NULL} then number of infections is drawn from the
 #'   model, but this parameter can also be used to manually set this value.
+#' @param t_inf if \code{NULL} then timings of infections are drawn from the
+#'   model, but this parameter can also be used to manually set these values in
+#'   a manual vector.
 #' @param return_full Boolean (Default \code{FALSE}). If \code{TRUE} then
 #'   return true values of hidden variables alongside observed data.
 #'
@@ -29,7 +32,7 @@
 #' @export
 
 sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
-                    ind_name = "ind1", n_inf = NULL, return_full = FALSE) {
+                    ind_name = "ind1", n_inf = NULL, t_inf = NULL, return_full = FALSE) {
   
   # check inputs
   assert_vector_numeric(samp_time)
@@ -46,6 +49,14 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
   if (!is.null(n_inf)) {
     assert_single_pos_int(n_inf)
   }
+  if (!is.null(t_inf)) {
+    if (is.null(n_inf)) {
+      n_inf <- length(t_inf)
+    } else {
+      assert_eq(n_inf, length(t_inf), message = "if n_inf and t_inf are both set manually then dimensions must match")
+    }
+    
+  }
   assert_single_logical(return_full)
   
   # get dimensions
@@ -53,6 +64,10 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
   n_samp <- length(samp_time)
   start_time <- samp_time[1]
   end_time <- samp_time[n_samp]
+  if (!is.null(t_inf)) {
+    assert_gr(t_inf, start_time)
+    assert_le(t_inf, end_time)
+  }
   t_period <- end_time - start_time
   
   # transform raw haplotype frequencies into the probability of transmission
@@ -69,24 +84,26 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
   if (is.null(n_inf)) {
     n_inf <- rpois(1, lambda*t_period)
   }
-  t_inf <- sort(runif(n_inf, start_time, end_time))
+  if (is.null(t_inf)) {
+    t_inf <- sort(runif(n_inf, start_time, end_time))
+  }
   
   # consider whether this individual initialises positive for each haplotype.
   # The probability of initialising positive is assumed to be given by the
   # relative rates of acquiring haplotypes vs. losing them.
   p_equilib <- lambda*q / (lambda*q + decay_rate)
-  w_init <- rbinom(n_haplo, 1, p_equilib)
+  w_init <- as.logical(rbinom(n_haplo, 1, p_equilib))
   
   # draw when initial haplotypes clear
   clear_init <- rexp(n_haplo, rate = decay_rate)
-  clear_init[w_init == 0] <- NA
+  clear_init[w_init == FALSE] <- NA
   
-  # w_inf and clear_inf are matrices storing whether an allele is introduced,
-  # and it's clearance time. If there are no infections then these are set to
+  # w_inf and clear_inf are matrices storing whether an allele is introduced
+  # and its clearance time. If there are no infections then these are set to
   # NULL
   w_inf <- clear_inf <- NULL
   if (n_inf > 0) {
-    w_inf <- matrix(0, n_inf, n_haplo)
+    w_inf <- matrix(FALSE, n_inf, n_haplo)
     clear_inf <- matrix(0, n_inf, n_haplo)
     
     # loop through all new infections
@@ -101,7 +118,7 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
       # draw the clearance times of haplos
       clear_inf[i,] <- t_inf[i] + rexp(n_haplo, rate = decay_rate)
     }
-    clear_inf[w_inf == 0] <- NA
+    clear_inf[w_inf == FALSE] <- NA
   }
   
   #------------------------------------------------
@@ -110,7 +127,7 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
   
   # initial clearance times
   for (i in seq_len(n_inf)) {
-    w <- which(w_inf[i,] == 1)
+    w <- which(w_inf[i,] == TRUE)
     clear_init[w] <- pmin(clear_init[w], t_inf[i])
   }
   clear_init <- pmin(clear_init, end_time)
@@ -119,7 +136,7 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
   t_running <- rep(end_time, n_haplo)
   for (i in n_inf:1) {
     clear_inf[i,] <- pmin(clear_inf[i,], t_running)
-    t_running[w_inf[i,] == 1] <- t_inf[i]
+    t_running[w_inf[i,] == TRUE] <- t_inf[i]
   }
   
   #------------------------------------------------
@@ -130,13 +147,13 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
   state_true <- matrix(0, n_samp, n_haplo)
   
   # apply initial conditions
-  for (j in which(w_init == 1)) {
+  for (j in which(w_init == TRUE)) {
     state_true[,j] <- (samp_time <= clear_init[j])
   }
   
   # apply subsequent infections
   for (i in seq_along(t_inf)) {
-    for (j in which(w_inf[i,] == 1)) {
+    for (j in which(w_inf[i,] == TRUE)) {
       state_true[,j] <- state_true[,j] + (samp_time >= t_inf[i]) & (samp_time <= clear_inf[i,j])
     }
   }
