@@ -28,6 +28,10 @@ public:
   std::vector<std::vector<double>> infection_times;
   int max_infections;
   
+  // current loglikelihood from the forward algorithm only (conditional on other
+  // objects)
+  double loglike_forward;
+  
   // proposal sd
   std::vector<double> proposal_sd_vec;
   int n_proposal_sd;
@@ -52,13 +56,17 @@ public:
             double sens,
             std::vector<int> n_infections,
             std::vector<std::vector<double>> infection_times,
+            std::vector<std::vector<std::vector<bool>>> w_array,
             std::vector<double> proposal_sd,
             double beta);
   
   void update();
+  double get_loglike_forward(double lambda_, double theta_, double decay_rate_, double sens_);
+  double get_loglike_w(double theta_);
   void update_lambda();
   void update_theta();
   void update_decay_rate();
   void update_sens();
+  cpp11::list get_w_list();
   
 };

@@ -15,7 +15,8 @@ void Indiv::init(System &sys,
                  std::vector<std::vector<bool>> data_bool,
                  std::vector<double> obs_times,
                  int n_infections,
-                 std::vector<double> infection_times) {
+                 std::vector<double> infection_times,
+                 std::vector<std::vector<bool>> infection_alleles) {
   
   // pointer to system object
   this->sys = &sys;
@@ -31,6 +32,7 @@ void Indiv::init(System &sys,
   n_obs = data[0].size();
   this->n_infections = n_infections;
   this->infection_times = infection_times;
+  this->infection_alleles = infection_alleles;
   this->start_time = sys.start_time;
   this->end_time = sys.end_time;
   this->max_infections = sys.max_infections;
@@ -42,9 +44,6 @@ void Indiv::init(System &sys,
   if (obs_times.size() != n_obs) {
     stop("Error in Indiv: obs_times.size() does not match n_obs");
   }
-  
-  // main alleles array. Initialise with all alleles introduced (must be at least one introduced)
-  infection_alleles = std::vector<std::vector<bool>>(n_infections, std::vector<bool>(n_haplos, true));
   
   // vectors for storing success and failure from algorithm1
   S_vec = std::vector<double>(n_haplos);
@@ -100,8 +99,8 @@ void Indiv::update_infection_times(double lambda, double theta, double decay_rat
     infection_times_prop[k] = rnorm1_interval(rng_state, infection_times[k], 3, start_time, end_time);
     
     // calculate loglikelihood of current and proposed state
-    double loglike_now = loglike_marginal_k(k, lambda, theta, decay_rate, sens, infection_times);
-    double loglike_prop = loglike_marginal_k(k, lambda, theta, decay_rate, sens, infection_times_prop);
+    double loglike_now = get_loglike_marginal_k(k, lambda, theta, decay_rate, sens, infection_times);
+    double loglike_prop = get_loglike_marginal_k(k, lambda, theta, decay_rate, sens, infection_times_prop);
     
     // calculate Metropolis-Hastings ratio
     double MH = loglike_prop - loglike_now;
@@ -112,7 +111,9 @@ void Indiv::update_infection_times(double lambda, double theta, double decay_rat
       infection_times[k] = infection_times_prop[k];
       
       // Gibbs sample introduced haplos given new timings
-      update_w_mat_k(k, lambda, theta, decay_rate, sens);
+      if (!sys->w_list_fixed) {
+        update_w_mat_k(k, lambda, theta, decay_rate, sens);
+      }
     } else {
       infection_times_prop[k] = infection_times[k];
     }
@@ -122,8 +123,8 @@ void Indiv::update_infection_times(double lambda, double theta, double decay_rat
 
 //------------------------------------------------
 // log-likelihood marginalised over the kth infection
-double Indiv::loglike_marginal_k(int k, double lambda, double theta, double decay_rate, double sens,
-                                 std::vector<double> &inf_times) {
+double Indiv::get_loglike_marginal_k(int k, double lambda, double theta, double decay_rate, double sens,
+                                     std::vector<double> &inf_times) {
   
   // populate vectors of success and failure probabilities
   for (int j = 0; j < n_haplos; ++j) {
@@ -147,6 +148,10 @@ double Indiv::loglike_marginal_k(int k, double lambda, double theta, double deca
 //------------------------------------------------
 // Gibbs sampler on W matrix
 void Indiv::update_w_mat(double lambda, double theta, double decay_rate, double sens) {
+  if (sys->w_list_fixed) {
+    return;
+  }
+  
   for (int k = 0; k < n_infections; ++k) {
     update_w_mat_k(k, lambda, theta, decay_rate, sens);
   }
@@ -191,9 +196,35 @@ void Indiv::update_w_mat_k(int k, double lambda, double theta, double decay_rate
 }
 
 //------------------------------------------------
-// basic log-likelihood, no marginalisation
-double Indiv::loglike_basic(double lambda, double theta, double decay_rate, double sens) {
-  return 0.0;
+// log-probability of w matrix (infection_alleles) given vector of (log)
+// probabilities of being positive or negative for each haplotype, plus a log
+// normalisation constant that is applied to each infection to account for
+// zero-truncation
+double Indiv::get_loglike_w(std::vector<double> &log_prob_pos, std::vector<double> &log_prob_neg, double log_norm) {
+  
+  double ret = 0.0;
+  for (int i = 0; i < n_infections; ++i) {
+    ret += log_norm;
+    for (int j = 0; j < n_haplos; ++j) {
+      if (infection_alleles[i][j]) {
+        ret += log_prob_pos[j];
+      } else {
+        ret += log_prob_neg[j];
+      }
+    }
+  }
+  return ret;
+}
+
+//------------------------------------------------
+// basic log-likelihood from forward algorithm, no marginalisation
+double Indiv::get_loglike_forward(double lambda, double theta, double decay_rate, double sens) {
+  
+  double ret = 0.0;
+  for (int j = 0; j < n_haplos; ++j) {
+    ret += log(algorithm1(j, lambda, theta, decay_rate, sens, infection_times, -1, true));
+  }
+  return ret;
 }
 
 //------------------------------------------------
@@ -211,8 +242,6 @@ double Indiv::algorithm1(int haplo_i, double lambda, double theta, double decay_
   double B = (1 - prob_equilib) * prob_given_neg;
   
 #ifdef DEBUG_ALGO1
-  print("infection times:");
-  print_vector(inf_times);
   std::stringstream ss;
   ss << "init:        " << A << " " << B;
   cpp11::message(ss.str());

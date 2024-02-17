@@ -383,6 +383,18 @@ std::vector<std::vector<int>> list_to_mat_int(cpp11::list x) {
   }
   return ret;
 }
+std::vector<std::vector<bool>> list_to_mat_bool(cpp11::list x) {
+  std::vector<std::vector<bool>> ret(x.size());
+  for (int i = 0; i < x.size(); i++) {
+    cpp11::logicals xi = x[i];
+    std::vector<bool> v(xi.size());
+    for (int j = 0; j < xi.size(); j++) {
+      v[j] = xi[j];
+    }
+    ret[i] = v;
+  }
+  return ret;
+}
 cpp11::writable::list mat_double_to_list(std::vector<std::vector<double>> &x) {
   cpp11::writable::list ret;
   for (int i = 0; i < x.size(); ++i) {

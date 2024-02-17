@@ -287,6 +287,7 @@ cpp11::writable::list array_int_to_list(std::vector<std::vector<std::vector<int>
 // convert between matrix (vector of vectors) and cpp11 list
 std::vector<std::vector<double>> list_to_mat_double(cpp11::list x);
 std::vector<std::vector<int>> list_to_mat_int(cpp11::list x);
+std::vector<std::vector<bool>> list_to_mat_bool(cpp11::list x);
 cpp11::writable::list mat_double_to_list(std::vector<std::vector<double>> &x);
 cpp11::writable::list mat_int_to_list(std::vector<std::vector<int>> &x);
 

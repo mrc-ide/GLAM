@@ -32,6 +32,7 @@ public:
   bool sens_fixed;
   bool n_infections_fixed;
   bool infection_times_fixed;
+  bool w_list_fixed;
   
   std::vector<std::vector<std::vector<bool>>> data_bool;
   std::vector<std::vector<double>> obs_time_vec;

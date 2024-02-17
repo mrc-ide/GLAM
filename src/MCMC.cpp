@@ -52,6 +52,14 @@ void MCMC::init(System &sys,
     list tmp4 = tmp1["infection_times"];
     std::vector<std::vector<double>> infection_times = list_to_mat_double(tmp4);
     
+    list tmp5 = tmp1["w_list"];
+    int n_samp = tmp5.size();
+    std::vector<std::vector<std::vector<bool>>> w_array(n_samp);
+    for (int i = 0; i < n_samp; ++i) {
+      list tmp5b = tmp5[i];
+      w_array[i] = list_to_mat_bool(tmp5b);
+    }
+    
     // pass parameters into particle
     particle_vec[r].init(sys,
                          lambda,
@@ -60,6 +68,7 @@ void MCMC::init(System &sys,
                          sens,
                          n_infections,
                          infection_times,
+                         w_array,
                          proposal_sd_mat[r],
                          beta[r]);
   }
@@ -106,12 +115,12 @@ void MCMC::run_mcmc(bool burnin, int iterations) {
   for (int i = start_i; i < iterations; ++i) {
     progress.tick();
     
-    // mock updates
+    // update particles
     for (int r = 0; r < n_rungs; ++r) {
       particle_vec[r].update();
     }
     
-    // mock Metropolis coupling
+    // TODO - Metropolis coupling
     for (int r = 0; r < (n_rungs - 1); ++r) {
       swap_acceptance_out[r]++;
     }
@@ -135,7 +144,8 @@ void MCMC::run_mcmc(bool burnin, int iterations) {
       "decay_rate"_nm = particle_vec[r].decay_rate,
       "sens"_nm = particle_vec[r].sens,
       "n_infections"_nm = particle_vec[r].n_infections,
-      "infection_times"_nm = mat_double_to_list(particle_vec[r].infection_times)
+      "infection_times"_nm = mat_double_to_list(particle_vec[r].infection_times),
+      "w_list"_nm = particle_vec[r].get_w_list()
     });
     param_list_out.push_back(tmp);
   }

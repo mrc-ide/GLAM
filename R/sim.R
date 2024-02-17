@@ -92,18 +92,18 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
   # The probability of initialising positive is assumed to be given by the
   # relative rates of acquiring haplotypes vs. losing them.
   p_equilib <- lambda*q / (lambda*q + decay_rate)
-  w_init <- rbinom(n_haplo, 1, p_equilib)
+  w_init <- as.logical(rbinom(n_haplo, 1, p_equilib))
   
   # draw when initial haplotypes clear
   clear_init <- rexp(n_haplo, rate = decay_rate)
-  clear_init[w_init == 0] <- NA
+  clear_init[w_init == FALSE] <- NA
   
   # w_inf and clear_inf are matrices storing whether an allele is introduced
   # and its clearance time. If there are no infections then these are set to
   # NULL
   w_inf <- clear_inf <- NULL
   if (n_inf > 0) {
-    w_inf <- matrix(0, n_inf, n_haplo)
+    w_inf <- matrix(FALSE, n_inf, n_haplo)
     clear_inf <- matrix(0, n_inf, n_haplo)
     
     # loop through all new infections
@@ -118,7 +118,7 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
       # draw the clearance times of haplos
       clear_inf[i,] <- t_inf[i] + rexp(n_haplo, rate = decay_rate)
     }
-    clear_inf[w_inf == 0] <- NA
+    clear_inf[w_inf == FALSE] <- NA
   }
   
   #------------------------------------------------
@@ -127,7 +127,7 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
   
   # initial clearance times
   for (i in seq_len(n_inf)) {
-    w <- which(w_inf[i,] == 1)
+    w <- which(w_inf[i,] == TRUE)
     clear_init[w] <- pmin(clear_init[w], t_inf[i])
   }
   clear_init <- pmin(clear_init, end_time)
@@ -136,7 +136,7 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
   t_running <- rep(end_time, n_haplo)
   for (i in n_inf:1) {
     clear_inf[i,] <- pmin(clear_inf[i,], t_running)
-    t_running[w_inf[i,] == 1] <- t_inf[i]
+    t_running[w_inf[i,] == TRUE] <- t_inf[i]
   }
   
   #------------------------------------------------
@@ -147,13 +147,13 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
   state_true <- matrix(0, n_samp, n_haplo)
   
   # apply initial conditions
-  for (j in which(w_init == 1)) {
+  for (j in which(w_init == TRUE)) {
     state_true[,j] <- (samp_time <= clear_init[j])
   }
   
   # apply subsequent infections
   for (i in seq_along(t_inf)) {
-    for (j in which(w_inf[i,] == 1)) {
+    for (j in which(w_inf[i,] == TRUE)) {
       state_true[,j] <- state_true[,j] + (samp_time >= t_inf[i]) & (samp_time <= clear_inf[i,j])
     }
   }
