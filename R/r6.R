@@ -453,6 +453,9 @@ glam_mcmc <- R6::R6Class(
                                private$rng_list[[chain]]                          # rng_ptr
         )
         
+        return(output_raw)
+        stop("R EXIT")
+        
         # sync RNG
         private$rng_list[[chain]]$sync()
         

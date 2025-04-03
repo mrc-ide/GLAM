@@ -71,7 +71,26 @@ void MCMC::init(System &sys,
                          w_array,
                          proposal_sd_mat[r],
                          beta[r]);
+     
   }
+  
+  // TODO - remove
+  list tmp1 = param_list[0];
+  list tmp4 = tmp1["infection_times"];
+  
+  Particle p = Particle(rng_state);
+  p.infection_times = list_to_mat_double(tmp4);;
+  print_matrix(p.infection_times);
+  
+  //particle_vec[0].infection_times = list_to_mat_double(tmp4);
+  //print_matrix(particle_vec[0].infection_times);
+  
+  //cpp11::writable::list tmp = mat_double_to_list(particle_vec[0].infection_times);
+  cpp11::writable::list tmp = mat_double_to_list(p.infection_times);
+  
+  std::cout << "TYPEOF(tmp): " << TYPEOF(tmp) << std::endl;
+  
+  stop("MCMC.init stop");
   
   // initialise counters
   iteration_counter = sys.iteration_counter_init + 1;
@@ -115,6 +134,8 @@ void MCMC::run_mcmc(bool burnin, int iterations) {
   for (int i = start_i; i < iterations; ++i) {
     progress.tick();
     
+    //continue;
+    
     // update particles
     for (int r = 0; r < n_rungs; ++r) {
       particle_vec[r].update();
@@ -135,6 +156,67 @@ void MCMC::run_mcmc(bool burnin, int iterations) {
     
     iteration_counter++;
   }
+  
+  /*
+  // print basics
+  print(n_rungs);
+  print(particle_vec[0].lambda);
+  print(particle_vec[0].theta);
+  print(particle_vec[0].decay_rate);
+  print(particle_vec[0].sens);
+  print_vector(particle_vec[0].n_infections);
+  print_matrix(particle_vec[0].infection_times);
+  */
+  
+  /*
+  // print w_list
+  writable::list tmp = as_cpp<writable::list>(particle_vec[0].get_w_list());
+  //print(tmp.size());
+  writable::list tmp2 = as_cpp<writable::list>(tmp[0]);
+  //print(tmp2.size());
+  logicals v = as_cpp<logicals>(tmp2[0]);
+  //print(v.size());
+  for (bool val : v) {  // cpp11::logicals supports implicit conversion to bool
+    std::cout << (val ? "1" : "0") << " ";
+  }
+  */
+  
+  //writable::list ret({
+      //"infection_times"_nm = mat_double_to_list(particle_vec[0].infection_times),
+      //"w_list"_nm = particle_vec[0].get_w_list()
+  //});
+  /*
+  print_matrix(particle_vec[0].infection_times);
+  
+  cpp11::writable::list ret2 = mat_double_to_list(particle_vec[0].infection_times);
+  for (size_t i = 0; i < ret2.size(); ++i) {
+    doubles numeric_vector = as_cpp<doubles>(ret2[i]);
+    for (double val : numeric_vector) {
+      std::cout << val << " ";
+    }
+    std::cout << std::endl;
+  }
+  */
+  //cpp11::writable::list tmp = mat_double_to_list(particle_vec[0].infection_times);
+  
+  //std::cout << "TYPEOF(tmp): " << TYPEOF(tmp) << std::endl;
+  
+  //writable::list ret = writable::list();
+  //ret["infection_times"] = tmp;
+  
+  //bool tst = (tmp == R_NilValue);
+  /*
+  if (tmp == R_NilValue) {
+  //if (true) {
+    print("is null");
+  } else {
+    print("is not null");
+  }
+  */
+  //writable::list ret;
+  //ret["infection_times"] = mat_double_to_list(particle_vec[0].infection_times);
+  
+  stop("bar2");
   
   // store final state
   for (int r = 0; r < n_rungs; ++r) {

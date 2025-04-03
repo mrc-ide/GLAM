@@ -33,6 +33,8 @@ void System::init(cpp11::list data_list,
   this->end_time = end_time;
   this->max_infections = max_infections;
   
+  
+  
   n_samp = data_list.size();
   n_rungs = beta.size();
   

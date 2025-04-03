@@ -1,6 +1,7 @@
 
 #include <cpp11.hpp>
 #include "MCMC.h"
+#include "Particle.h"
 #include "misc.h"
 #include "System.h"
 
@@ -32,6 +33,45 @@ list mcmc_cpp(cpp11::list data_list,
   auto rng = dust::random::r::rng_pointer_get<dust::random::xoshiro256plus>(rng_ptr);
   dust::random::xoshiro256plus& rng_state = rng->state(0);
   
+  
+  // TODO - delete
+  // minimal failing example
+  
+  std::vector<double> z(3, 8.5);
+  cpp11::writable::list ret1;
+  cpp11::writable::doubles v0(z.begin(), z.end());
+  ret1.push_back(v0);
+  
+  stop("early stop 2");
+  
+  //list tmp1 = param_list[0];
+  //list tmp4 = tmp1["infection_times"];
+  
+  Particle p = Particle(rng_state);
+  //p.infection_times = list_to_mat_double(tmp4);
+  
+  std::vector<std::vector<double>> x(1);
+  x[0] = std::vector<double>(3, 9.5);
+  p.infection_times = x;
+  
+  print_matrix(p.infection_times);
+  
+  cpp11::writable::list ret0;
+  //for (int i = 0; i < x.size(); ++i) {
+    cpp11::doubles v = cpp11::as_sexp(x[0]);
+    //ret0.push_back(v);
+  //}
+  
+  //cpp11::writable::list tmp = mat_double_to_list(p.infection_times);
+  //cpp11::writable::list tmp = mat_double_to_list(x);
+  
+  //std::cout << "TYPEOF(tmp): " << TYPEOF(tmp) << std::endl;
+  
+  stop("early stop");
+  
+  
+  //stop("foo1");
+  
   // create system object to hold all input values. This makes it easier when
   // passing objects around between classes
   System sys(rng_state);
@@ -48,15 +88,24 @@ list mcmc_cpp(cpp11::list data_list,
            max_infections,
            rng_ptr);
   
+  //stop("foo1");
+  
   // initialise MCMC
   MCMC mcmc(sys.rng_state);
+  
+  //stop("foo1");
+  
   mcmc.init(sys,
             param_list,
             proposal_sd,
             beta);
   
+  //stop("foo1");
+  
   // run main loop
   mcmc.run_mcmc(true, iterations);
+  
+  stop("foo1");
   
   // get output objects into cpp11 format
   writable::list acceptance_out = mat_int_to_list(mcmc.acceptance_out);
