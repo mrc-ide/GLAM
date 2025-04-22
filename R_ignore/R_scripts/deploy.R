@@ -31,14 +31,6 @@ sim1 <- sim_ind(samp_time = samp_time,
                 n_inf = 5)
 plot_ind(sim1)
 
-lambda_true <- NULL
-theta_true <- NULL
-decay_rate_true <- NULL
-sens_true <- NULL
-n_infections_true <- NULL
-infection_times_true <- NULL
-w_list_true <- NULL
-
 sim2 <- sim_cohort(n = 10,
                    samp_time = samp_time,
                    haplo_freqs = haplo_freqs,
@@ -48,6 +40,14 @@ sim2 <- sim_cohort(n = 10,
                    sens = sens,
                    n_inf = n_infections_true,
                    return_full = TRUE)
+
+lambda_true <- NULL
+theta_true <- NULL
+decay_rate_true <- NULL
+sens_true <- NULL
+n_infections_true <- NULL
+infection_times_true <- NULL
+w_list_true <- NULL
 
 #sim2$df_data |>
 #  filter(ind == "ind2") |>
@@ -63,18 +63,26 @@ n_infections_true <- mapply(function(x) length(x$t_inf), sim2$raw_list)
 
 # -----------------------
 
-
 g <- glam_mcmc$new(df_data = sim2$df_data)
 
-g$init(start_time = 0, end_time = 10, chains = 1, rungs = 1, haplo_freqs = haplo_freqs,
-       lambda = lambda_true, theta = theta_true, decay_rate = decay_rate_true, sens = sens_true,
-       n_infections = n_infections_true, infection_times = infection_times_true,
-       max_infections = max_infections, w_list = w_list_true)
+g$init(start_time = 0, 
+       end_time = 10, 
+       chains = 1, 
+       rungs = 1, 
+       haplo_freqs = haplo_freqs,
+       lambda = lambda_true, 
+       theta = theta_true, 
+       decay_rate = decay_rate_true, 
+       sens = sens_true,
+       n_infections = n_infections_true, 
+       infection_times = infection_times_true,
+       max_infections = max_infections, 
+       w_list = w_list_true)
 
 g$burn(iterations = 1e2)
-t0 <- Sys.time()
-g$sample(iterations = 1e3)
-Sys.time() - t0
+system.time(
+  g$sample(iterations = 1e3)
+  )
 
 # -----------------------
 
