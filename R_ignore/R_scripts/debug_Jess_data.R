@@ -27,9 +27,7 @@ dat <- dat |>
          positive = as.numeric(positive))
 
 # simple plot of observed haplotypes
-dat |>
-  ggplot() + theme_bw() +
-  geom_point(aes(x = time, y = haplo, alpha = positive), size = 3)
+plot_data(dat)
 
 # -----------------------
 
@@ -45,16 +43,16 @@ g$init(start_time = 0,
        rungs = 1, 
        haplo_freqs = haplo_freqs,
        lambda = 1, 
-       theta = 0.1, 
-       decay_rate = 1, 
-       sens = 0.9,
+       theta = NULL, 
+       decay_rate = NULL, 
+       sens = NULL,
        n_infections = 3, 
        infection_times = NULL,
        max_infections = 10,
        w_list = NULL)
 
-g$burn(iterations = 1e2)
-g$sample(1e3)
+g$burn(iterations = 1e3)
+g$sample(1e4)
 
 # -----------------------
 

@@ -24,8 +24,8 @@ test_that("basic mcmc (burn-in + sampling) runs without error", {
   g$init(start_time = 0, end_time = 10, chains = 3, rungs = 5)
   
   # run mcmc
-  g$burn(iterations = 1e2)
-  g$sample(iterations = 1e2)
+  g$burn(iterations = 1e2, silent = TRUE)
+  g$sample(iterations = 1e2, silent = TRUE)
   
   expect_equal(1, 1)
 })

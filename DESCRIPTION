@@ -15,7 +15,7 @@ Description: Malaria infections often contain multiple haplotypes. When
     became infected, and for how long this infection lasted.
 License: MIT + file LICENSE
 Encoding: UTF-8
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.2
 LinkingTo: 
     cpp11,
     dust,

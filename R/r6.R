@@ -1,64 +1,18 @@
-#' @title R6 class representing a GLAM MCMC object
+
+#------------------------------------------------
+#' GLAM MCMC Class
 #'
-#' @description 
-#' Create a new glam_mcmc object to run an MCMC.
-#' 
+#' An R6 generator for running Markov Chain Monte Carlo (MCMC) in GLAM.
+#'
+#' @name glam_mcmc
+#' @docType class
+#' @format An \code{\link[R6]{R6Class}} generator object with methods:
 #' @import R6
 #' @import dust
 #' @importFrom tidyr pivot_wider
 #' @export
-
 glam_mcmc <- R6::R6Class(
   classname = "glam_mcmc",
-  
-  private = list(
-    
-    ### Private variables ###
-    
-    # data
-    df_data = NULL,
-    list_data = NULL,
-    n_samp = NULL,
-    n_haplos = NULL,
-    haplo_freqs = NULL,
-    obs_time_list = NULL,
-    
-    # program flow
-    init_called = FALSE,
-    burn_called = FALSE,
-    sample_called = FALSE,
-    
-    # MCMC parameters
-    chains = NULL,
-    rungs = NULL,
-    max_infections = NULL,
-    param_list = NULL,
-    param_update_list = NULL,
-    proposal_sd = NULL,
-    n_proposal_sd = NULL,
-    rng_list = NULL,
-    iteration_counter = NULL,
-    acceptance_counter = NULL,
-    swap_acceptance_counter = NULL,
-    duration = NULL,
-    
-    # misc parameters
-    start_time = NULL,
-    end_time = NULL,
-    
-    # parameter draws
-    lambda_store = NULL,
-    theta_store = NULL,
-    decay_rate_store = NULL,
-    sens_store = NULL,
-    n_infections_store = NULL,
-    infection_times_store = NULL,
-    
-    ### Private functions ###
-    private_func = function(x) {
-      print(x)
-    }
-  ),
   
   public = list(
     
@@ -68,8 +22,6 @@ glam_mcmc <- R6::R6Class(
     ### Public functions ###
     
     #--------------------
-    ## Load data
-     
     #' @description
     #' Load data into the glam_mcmc object.
     #' 
@@ -128,8 +80,6 @@ glam_mcmc <- R6::R6Class(
     },
     
     #--------------------
-    ## Define parameters
-     
     #' @description
     #' Define model parameters.
     #' 
@@ -353,8 +303,6 @@ glam_mcmc <- R6::R6Class(
     },
     
     #--------------------
-    ## Run burn-in MCMC
-     
     #' @description
     #' Run burn-in MCMC
     #' 
@@ -379,15 +327,13 @@ glam_mcmc <- R6::R6Class(
       private$burn_called <- TRUE
       
       # run main loop
-      self$run_burn_sample(burnin = TRUE,
-                           iterations = iterations,
-                           target_acceptance = target_acceptance,
-                           silent = silent)
+      private$run_burn_sample(burnin = TRUE,
+                              iterations = iterations,
+                              target_acceptance = target_acceptance,
+                              silent = silent)
     },
     
     #--------------------
-    ## Run sampling MCMC
-    
     #' @description
     #' Run sampling MCMC
     #' 
@@ -408,17 +354,174 @@ glam_mcmc <- R6::R6Class(
       private$sample_called <- TRUE
       
       # run main loop
-      self$run_burn_sample(burnin = FALSE,
-                           iterations = iterations,
-                           target_acceptance = 0.1, # this value is ignored
-                           silent = silent)
+      private$run_burn_sample(burnin = FALSE,
+                              iterations = iterations,
+                              target_acceptance = 0.1, # this value is ignored
+                              silent = silent)
     },
     
     #--------------------
-    #' @param burnin TODO
-    #' @param iterations TODO
-    #' @param target_acceptance TODO
-    #' @param silent TODO
+    #' @description
+    #' Get global parameter output
+    get_output_global = function() {
+      
+      ret <- mapply(function(i) {
+        iteration_counter <- unlist(private$iteration_counter[[i]][c("burn", "sample")])
+        
+        v_chain <- rep(i, sum(iteration_counter))
+        v_phase <- rep(c("burnin", "sampling"), times = iteration_counter)
+        v_iteration <- 1:sum(iteration_counter)
+        
+        data.frame(chain = v_chain,
+                   phase = v_phase,
+                   iteration = v_iteration,
+                   lambda = private$lambda_store[[i]],
+                   theta = private$theta_store[[i]],
+                   decay_rate = private$decay_rate_store[[i]],
+                   sens = private$sens_store[[i]])
+      }, seq_len(private$chains), SIMPLIFY = FALSE) |>
+        bind_rows() |>
+        mutate(phase = factor(phase, levels = c("burnin", "sampling")),
+               chain = factor(chain, levels = 1:private$chains))
+      
+      return(ret)
+    },
+    
+    #--------------------
+    #' @description
+    #' Get number of infections output.
+    get_output_n_infections = function() {
+      
+      ret <- mapply(function(i) {
+        iteration_counter <- unlist(private$iteration_counter[[i]][c("burn", "sample")])
+        
+        v_chain <- rep(i, length(private$n_infections_store[[i]]))
+        v_phase <- rep(c("burnin", "sampling"), times = iteration_counter * private$n_samp)
+        v_iteration <- rep(1:sum(iteration_counter), each = private$n_samp)
+        v_ind <- rep(1:private$n_samp, times = sum(iteration_counter))
+        
+        data.frame(chain = v_chain,
+                   phase = v_phase,
+                   iteration = v_iteration,
+                   ind = v_ind,
+                   value = as.vector(t(private$n_infections_store[[i]])))
+      }, seq_len(private$chains), SIMPLIFY = FALSE) |>
+        bind_rows() |>
+        mutate(phase = factor(phase, levels = c("burnin", "sampling")),
+               chain = factor(chain, levels = 1:private$chains))
+      
+      return(ret)
+    },
+    
+    #--------------------
+    #' @description
+    #' Get infection times output.
+    get_output_infection_times = function() {
+      
+      seq_len_V <- Vectorize(function(n) seq_len(n), SIMPLIFY = FALSE)
+      
+      ret <- mapply(function(i) {
+        iteration_counter <- unlist(private$iteration_counter[[i]][c("burn", "sample")])
+        
+        n_infections <- as.vector(t(private$n_infections_store[[i]]))
+        
+        v_iter <- rep(1:sum(iteration_counter), times = rowSums(private$n_infections_store[[i]]))
+        v_phase <- ifelse(v_iter <= iteration_counter[1], "burnin", "sampling")
+        v_ind <- rep(rep(1:private$n_samp, times = sum(iteration_counter)), times = n_infections)
+        v_inf <- unlist(seq_len_V(n_infections))
+        
+        # sort by infection time before indexing infections
+        data.frame(chain = i,
+                   phase = v_phase,
+                   iteration = v_iter,
+                   individual = v_ind,
+                   value = unlist(private$infection_times_store[[i]])) |>
+          arrange(chain, phase, iteration, individual, value) |>
+          add_column(infection = v_inf, .after = "individual")
+        
+      }, seq_len(private$chains), SIMPLIFY = FALSE) |>
+        bind_rows() |>
+        mutate(phase = factor(phase, levels = c("burnin", "sampling")),
+               chain = factor(chain, levels = 1:private$chains),
+               infection = factor(infection, levels = 1:private$max_infections))
+      
+      return(ret)
+    },
+    
+    #--------------------
+    #' @description
+    #' Print MCMC object summary
+    print = function() {
+      message("Data")
+      message("--------")
+      
+      # print summary of data
+      message(sprintf("%s samples", private$n_samp))
+      message(sprintf("%s haplotypes", private$n_haplos))
+      if (length(unique(private$obs_time_list)) == 1) {
+        message(sprintf("%s observation times, identical for all samples", length(private$obs_time_list[[1]])))
+      } else {
+        message("variable observation times between samples")
+      }
+      message("")
+      
+      message("MCMC")
+      message("--------")
+      
+      message(sprintf("Tuning: %s iterations", 0))
+      
+      # return invisibly
+      invisible(self)
+    }
+    
+  ),
+  
+  private = list(
+    
+    ### Private variables ###
+    
+    # data
+    df_data = NULL,
+    list_data = NULL,
+    n_samp = NULL,
+    n_haplos = NULL,
+    haplo_freqs = NULL,
+    obs_time_list = NULL,
+    
+    # program flow
+    init_called = FALSE,
+    burn_called = FALSE,
+    sample_called = FALSE,
+    
+    # MCMC parameters
+    chains = NULL,
+    rungs = NULL,
+    max_infections = NULL,
+    param_list = NULL,
+    param_update_list = NULL,
+    proposal_sd = NULL,
+    n_proposal_sd = NULL,
+    rng_list = NULL,
+    iteration_counter = NULL,
+    acceptance_counter = NULL,
+    swap_acceptance_counter = NULL,
+    duration = NULL,
+    
+    # misc parameters
+    start_time = NULL,
+    end_time = NULL,
+    
+    # parameter draws
+    lambda_store = NULL,
+    theta_store = NULL,
+    decay_rate_store = NULL,
+    sens_store = NULL,
+    n_infections_store = NULL,
+    infection_times_store = NULL,
+    
+    ### Private functions ###
+    
+    #--------------------
     run_burn_sample = function(burnin, iterations, target_acceptance = 0.44, silent = FALSE) {
       
       # check inputs
@@ -434,7 +537,9 @@ glam_mcmc <- R6::R6Class(
       chains <- private$chains
       for (chain in 1:chains) {
         
-        message(sprintf("\nRunning chain %s", chain))
+        if (!silent) {
+          message(sprintf("\nRunning chain %s", chain))
+        }
         
         # run this chain
         output_raw <- mcmc_cpp(private$list_data,                                 # data in list format
@@ -482,116 +587,6 @@ glam_mcmc <- R6::R6Class(
     },
     
     #--------------------
-    get_output_global = function() {
-      
-      ret <- mapply(function(i) {
-        iteration_counter <- unlist(private$iteration_counter[[i]][c("burn", "sample")])
-        
-        v_chain <- rep(i, sum(iteration_counter))
-        v_phase <- rep(c("burnin", "sampling"), times = iteration_counter)
-        v_iteration <- 1:sum(iteration_counter)
-        
-        data.frame(chain = v_chain,
-                   phase = v_phase,
-                   iteration = v_iteration,
-                   lambda = private$lambda_store[[i]],
-                   theta = private$theta_store[[i]],
-                   decay_rate = private$decay_rate_store[[i]],
-                   sens = private$sens_store[[i]])
-      }, seq_len(private$chains), SIMPLIFY = FALSE) |>
-        bind_rows() |>
-        mutate(phase = factor(phase, levels = c("burnin", "sampling")),
-               chain = factor(chain, levels = 1:private$chains))
-      
-      return(ret)
-    },
-    
-    #--------------------
-    get_output_n_infections = function() {
-      
-      ret <- mapply(function(i) {
-        iteration_counter <- unlist(private$iteration_counter[[i]][c("burn", "sample")])
-        
-        v_chain <- rep(i, length(private$n_infections_store[[i]]))
-        v_phase <- rep(c("burnin", "sampling"), times = iteration_counter * private$n_samp)
-        v_iteration <- rep(1:sum(iteration_counter), each = private$n_samp)
-        v_ind <- rep(1:private$n_samp, times = sum(iteration_counter))
-        
-        data.frame(chain = v_chain,
-                   phase = v_phase,
-                   iteration = v_iteration,
-                   ind = v_ind,
-                   value = as.vector(t(private$n_infections_store[[i]])))
-      }, seq_len(private$chains), SIMPLIFY = FALSE) |>
-        bind_rows() |>
-        mutate(phase = factor(phase, levels = c("burnin", "sampling")),
-               chain = factor(chain, levels = 1:private$chains))
-      
-      return(ret)
-    },
-    
-    #--------------------
-    get_output_infection_times = function() {
-      
-      seq_len_V <- Vectorize(function(n) seq_len(n), SIMPLIFY = FALSE)
-      
-      ret <- mapply(function(i) {
-        iteration_counter <- unlist(private$iteration_counter[[i]][c("burn", "sample")])
-        
-        n_infections <- as.vector(t(private$n_infections_store[[i]]))
-        
-        v_iter <- rep(1:sum(iteration_counter), times = rowSums(private$n_infections_store[[i]]))
-        v_phase <- ifelse(v_iter <= iteration_counter[1], "burnin", "sampling")
-        v_ind <- rep(rep(1:private$n_samp, times = sum(iteration_counter)), times = n_infections)
-        v_inf <- unlist(seq_len_V(n_infections))
-        
-        # sort by infection time before indexing infections
-        data.frame(chain = i,
-                   phase = v_phase,
-                   iteration = v_iter,
-                   individual = v_ind,
-                   value = unlist(private$infection_times_store[[i]])) |>
-          arrange(chain, phase, iteration, individual, value) |>
-          add_column(infection = v_inf, .after = "individual")
-        
-      }, seq_len(private$chains), SIMPLIFY = FALSE) |>
-        bind_rows() |>
-        mutate(phase = factor(phase, levels = c("burnin", "sampling")),
-               chain = factor(chain, levels = 1:private$chains),
-               infection = factor(infection, levels = 1:private$max_infections))
-      
-      return(ret)
-    },
-    
-    #--------------------
-    ## Print
-     
-    #' @description
-    #' Print MCMC object summary
-    print = function() {
-      message("Data")
-      message("--------")
-      
-      # print summary of data
-      message(sprintf("%s samples", private$n_samp))
-      message(sprintf("%s haplotypes", private$n_haplos))
-      if (length(unique(private$obs_time_list)) == 1) {
-        message(sprintf("%s observation times, identical for all samples", length(private$obs_time_list[[1]])))
-      } else {
-        message("variable observation times between samples")
-      }
-      message("")
-      
-      message("MCMC")
-      message("--------")
-      
-      message(sprintf("Tuning: %s iterations", 0))
-      
-      # return invisibly
-      invisible(self)
-    },
-    
-    #--------------------
     debug_algo1 = function() {
       chain <- 1
       debug_algo1_cpp(private$list_data,                                 # data in list format
@@ -606,6 +601,5 @@ glam_mcmc <- R6::R6Class(
                       private$max_infections,                            # max infections
                       private$rng_list[[chain]])                         # rng_ptr
     }
-    
   )
 )
