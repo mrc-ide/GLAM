@@ -1,6 +1,7 @@
 
 #include <cpp11.hpp>
 #include "MCMC.h"
+#include "Particle.h"
 #include "misc.h"
 #include "System.h"
 
@@ -50,6 +51,7 @@ list mcmc_cpp(cpp11::list data_list,
   
   // initialise MCMC
   MCMC mcmc(sys.rng_state);
+  
   mcmc.init(sys,
             param_list,
             proposal_sd,

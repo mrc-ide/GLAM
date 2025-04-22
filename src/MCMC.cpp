@@ -71,6 +71,7 @@ void MCMC::init(System &sys,
                          w_array,
                          proposal_sd_mat[r],
                          beta[r]);
+     
   }
   
   // initialise counters

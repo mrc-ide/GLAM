@@ -434,7 +434,7 @@ glam_mcmc <- R6::R6Class(
       chains <- private$chains
       for (chain in 1:chains) {
         
-        #message(sprintf("\nRunning chain %s", chain))
+        message(sprintf("\nRunning chain %s", chain))
         
         # run this chain
         output_raw <- mcmc_cpp(private$list_data,                                 # data in list format
