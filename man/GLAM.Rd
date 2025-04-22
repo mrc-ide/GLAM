@@ -2,6 +2,7 @@
 % Please edit documentation in R/GLAM.R
 \docType{package}
 \name{GLAM}
+\alias{GLAM-package}
 \alias{GLAM}
 \title{GLAM}
 \description{
@@ -13,4 +14,20 @@ Malaria infections often contain multiple haplotypes. When
   and produces estimates of the time(s) at which each individual in a
   longitudinal cohort became infected, for how long this infection lasted,
   and various other parameters.
+}
+\seealso{
+Useful links:
+\itemize{
+  \item Report bugs at \url{https://github.com/mrc-ide/GLAM}
+}
+
+}
+\author{
+\strong{Maintainer}: Bob Verity \email{r.verity@imperial.ac.uk}
+
+Authors:
+\itemize{
+  \item Sophie Berube \email{sberube3@jhmi.edu}
+}
+
 }

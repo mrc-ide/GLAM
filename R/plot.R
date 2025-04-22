@@ -1,76 +1,161 @@
 #------------------------------------------------
-#' @title Plot a single simulated individual
+#' @title Plot simulated infection trajectories
 #'
-#' @description Produces a plot showing the infections in a single individual,
-#'   and which haplotypes were introduced in each infection. Requires that the
-#'   individual was simulated with hidden states returned (\code{return_full =
-#'   TRUE}).
+#' @description
+#' Given a \code{sim_list} produced by your simulation routines, \code{plot_sim()}
+#' will draw, for each individual:
+#' * Vertical dashed lines at each true infection time.
+#' * Pink segments showing any initial infections.
+#' * Black segments for new infections occurring after the start.
+#' * Points coloured by observed vs.\ unobserved haplotype states.
 #'
-#' @param ind a single individual simulated using \code{sim_ind()} with
-#'   \code{return_full = TRUE}.
+#' @param sim_list A list with at least two elements:
+#'   \describe{
+#'     \item{\code{raw_list}}{A list of simulation output objects, each with
+#'       components \code{t_inf}, \code{clear_init}, \code{w_init},
+#'       \code{clear_inf}, \code{w_inf}, \code{samp_time},
+#'       \code{state_true}, and \code{state_obs}.}
+#'     \item{\code{df_data}}{A \code{data.frame} with columns
+#'       \code{haplo} and \code{time}, used to determine the number of
+#'       haplotypes (\code{n_haplo}) and observation times (\code{n_obs}).}
+#'   }
+#' @param ind Integer vector or \code{NULL}.  Which indices of
+#'   \code{sim_list$raw_list} to plot.  Defaults to all individuals.
 #'
+#' @return A \pkg{ggplot2} object with:
+#'   \itemize{
+#'     \item Infection times as vertical dashed lines.
+#'     \item Initial infections (pink segments).
+#'     \item Subsequent infections (black segments).
+#'     \item Observed haplotype states as coloured points.
+#'   }
+#'   
 #' @import ggplot2
 #' @importFrom dplyr mutate
 #' @export
 
-plot_ind <- function(ind) {
+plot_sim <- function(sim_list, ind = NULL) {
   
-  # avoid "no visible binding" notes
-  start <- haplo <- end <- time <- NULL
+  # subset list
+  if (is.null(ind)) {
+    ind <- 1:length(sim_list$raw_list)
+  }
+  sim_list$raw_list <- sim_list$raw_list[ind]
   
-  # check inputs
-  assert_in(c("state_obs", "t_inf", "w_init", "clear_init", "w_inf", "clear_inf",
-              "state_true", "samp_time"), names(ind))
-  
-  # extract values
-  state_obs <- ind$state_obs
-  t_inf <- ind$t_inf
-  w_init <- ind$w_init
-  clear_init <- ind$clear_init
-  w_inf <- ind$w_inf
-  clear_inf <- ind$clear_inf
-  state_true <- ind$state_true
-  samp_time <- ind$samp_time
-  
-  n_haplo <- length(w_init)
-  n_samp <- length(samp_time)
-  start_time <- samp_time[1]
-  end_time <- samp_time[n_samp]
-  n_inf <- length(t_inf)
+  # get basic properties
+  n_ind <- length(sim_list$raw_list)
+  n_haplo <- length(unique(sim_list$df_data$haplo))
+  n_obs <- length(unique(sim_list$df_data$time))
+  start_time <- mapply(function(x) {
+    min(x$samp_time)
+  }, sim_list$raw_list) |>
+    min()
+  end_time <- mapply(function(x) {
+    max(x$samp_time)
+  }, sim_list$raw_list) |>
+    max()
   
   # plot infection times
-  df_plot <- data.frame(start = rep(start_time, sum(w_init)),
-                        end = clear_init[w_init == 1],
-                        haplo = which(w_init == 1))
-  if (n_inf > 0) {
-    df_plot <- df_plot |>
-      bind_rows(data.frame(start = (w_inf*t_inf)[w_inf == 1],
-                           end = clear_inf[w_inf == 1],
-                           haplo = which(w_inf == 1, arr.ind = TRUE)[,2]))
-  }
+  df_t_inf <- mapply(function(x, i) {
+    data.frame(ind = i,
+               t_inf = x$t_inf)
+  }, sim_list$raw_list, 1:n_ind, SIMPLIFY = FALSE) |>
+    bind_rows()
   
-  plot1 <- ggplot(df_plot) + theme_bw() +
-    geom_vline(xintercept = t_inf, linetype = "dashed") +
-    geom_point(aes(x = start, y = haplo), size = 3, pch = 4, stroke = 1.3) +
-    geom_segment(aes(x = start, y = haplo, xend = end, yend = haplo)) +
-    xlab("Time") + ylab("Haplotype") +
-    xlim(c(start_time, end_time)) + ylim(c(1, n_haplo)) +
-    theme(panel.grid = element_blank())
+  plot1 <- ggplot(df_t_inf) + theme_bw() +
+    geom_vline(aes(xintercept = t_inf), linetype = "dashed") +
+    facet_wrap(~ind) +
+    scale_x_continuous(limits = c(start_time, end_time))
   
-  # add haplotypes to plot
-  df_plot <- data.frame(time = samp_time,
-                        haplo = rep(1:n_haplo, each = n_samp),
-                        state_true = c("Absent", "Present")[state_true + 1],
-                        state_obs = c("Unobserved", "Observed")[state_obs + 1]) |>
-    mutate(state_true = factor(state_true, levels = c("Absent", "Present")),
-           state_obs = factor(state_obs, levels = c("Unobserved", "Observed")))
   
-  plot2 <- plot1 + 
-    geom_point(aes(x = time, y = haplo, alpha = state_true, col = state_obs),
-               size = 3, data = df_plot) +
-    scale_color_discrete(name = "Observed status") +
-    scale_alpha_manual(values = c(0.1, 1), name = "True status")
+  # overlay starting infection segments
+  df_init_inf <- mapply(function(x, i) {
+    if (any(x$w_init)) {
+      w <- which(x$w_init)
+      data.frame(ind = i,
+                 haplo = w,
+                 t_start = start_time,
+                 t_clear = x$clear_init[w])
+    } else {
+      NULL
+    }
+  }, sim_list$raw_list, 1:n_ind, SIMPLIFY = FALSE) |>
+    bind_rows()
   
-  # tweak legends etc
-  plot2
+  plot1 <- plot1 +
+    geom_segment(aes(x = t_start, xend = t_clear, y = haplo), col = "pink", data = df_init_inf)
+  
+  
+  # overlay new infection segments
+  df_new_inf <- mapply(function(x, i) {
+    if (any(x$w_inf)) {
+      w <- which(x$w_inf, arr.ind = TRUE)
+      data.frame(ind = i,
+                 haplo = w[,2],
+                 t_start = x$t_inf[w[,1]],
+                 t_clear = x$clear_inf[w])
+    } else {
+      NULL
+    }
+  }, sim_list$raw_list, 1:n_ind, SIMPLIFY = FALSE) |>
+    bind_rows()
+  
+  plot1 <- plot1 +
+    geom_segment(aes(x = t_start, xend = t_clear, y = haplo), data = df_new_inf)
+  
+  
+  # overlay observed haplos
+  df_haplo <- mapply(function(x, i) {
+    data.frame(ind = i,
+               time = x$samp_time,
+               haplo = rep(1:n_haplo, each = n_obs),
+               state_true = c("Absent", "Present")[x$state_true + 1],
+               state_obs = c("Unobserved", "Observed")[x$state_obs + 1]) |>
+      mutate(state_combined = paste(state_true, state_obs, sep = "_"),
+             state_combined = factor(state_combined, levels = c("Absent_Unobserved",
+                                                                "Present_Unobserved",
+                                                                "Present_Observed")))
+  }, sim_list$raw_list, 1:n_ind, SIMPLIFY = FALSE) |>
+    bind_rows()
+  
+  plot1 <- plot1 + 
+    geom_point(aes(x = time, y = haplo, col = state_combined), size = 2, data = df_haplo) +
+    scale_color_manual(values = c("#00000010", "firebrick1", 'dodgerblue'),
+                       labels = c("Absent, unobserved",
+                                  "Present, unobserved",
+                                  "Present, observed"), 
+                       name = "Observed status")
+  
+  plot1
+}
+
+#------------------------------------------------
+#' @title Plot observed haplotypes
+#'
+#' @description Produces a plot showing the haplotypes observed at each
+#'   observation time. If the input data spans multiple individuals then these
+#'   will be faceted.
+#'
+#' @param df_data a data.frame with columns for \code{ind} (factor),
+#'   \code{haplo} (factor), \code{time} (numeric), and \code{positive}
+#'   (logical).
+#'
+#' @import ggplot2
+#' @export
+
+plot_data <- function(df_data) {
+  
+  # check inputs
+  assert_dataframe(df_data)
+  assert_in(c("ind", "haplo", "time", "positive"), names(df_data))
+  assert_int(df_data$time)
+  assert_in(df_data$positive, c(0, 1))
+  
+  df_data |>
+    ggplot() + theme_bw() +
+    geom_point(aes(x = time, y = haplo, alpha = positive), size = 1) +
+    facet_wrap(~ind) +
+    theme(panel.grid = element_blank()) +
+    guides(alpha = "none") +
+    xlab("Time") + ylab("Haplotype")
 }
