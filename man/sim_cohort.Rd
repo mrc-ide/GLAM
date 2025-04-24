@@ -4,7 +4,17 @@
 \alias{sim_cohort}
 \title{Simulate a complete cohort of individuals}
 \usage{
-sim_cohort(n, samp_time, haplo_freqs, lambda, decay_rate, sens)
+sim_cohort(
+  n,
+  samp_time,
+  haplo_freqs,
+  lambda,
+  theta,
+  decay_rate,
+  sens,
+  n_inf = NULL,
+  return_full = FALSE
+)
 }
 \arguments{
 \item{n}{number of individuals in cohort.}
@@ -16,9 +26,18 @@ Must be at least two unique time points increasing in value.}
 
 \item{lambda}{force of infection.}
 
+\item{theta}{COI intensity parameter.}
+
 \item{decay_rate}{rate at which haplotypes clear.}
 
 \item{sens}{sensitivity of sequencing. Assumed the same for all haplotypes.}
+
+\item{n_inf}{if \code{NULL} then number of infections is drawn from the
+model, but this parameter can also be used to manually set this value. If
+so, input as a vector over individuals.}
+
+\item{return_full}{Boolean (Default \code{FALSE}). If \code{TRUE} then
+return true values of hidden variables alongside observed data.}
 }
 \description{
 Simulate a cohort of individuals from the generative model. Runs

@@ -10,8 +10,8 @@
 #'   longitudinal cohort became infected, for how long this infection lasted,
 #'   and various other parameters.
 #'
-#' @docType package
 #' @name GLAM
+"_PACKAGE"
 NULL
 
 #------------------------------------------------
