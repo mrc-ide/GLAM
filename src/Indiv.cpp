@@ -52,7 +52,7 @@ void Indiv::init(System &sys,
 
 //------------------------------------------------
 // update number of infections
-void Indiv::update_n_infections() {
+void Indiv::update_n_infections(double lambda, double theta, double decay_rate, double sens) {
   if (sys->n_infections_fixed) {
     return;
   }
@@ -63,23 +63,98 @@ void Indiv::update_n_infections() {
       return;
     }
     
-    double new_time = runif1(rng_state, start_time, end_time);
-    std::vector<bool> allele_vec(n_haplos, true);
+    // get log-likelihood of current state
+    double loglike_now = get_loglike_forward(lambda, theta, decay_rate, sens);
     
-    infection_alleles.push_back(allele_vec);
-    infection_times.push_back(new_time);
+    // generate a new value over the entire interval
+    double new_time = runif1(rng_state, start_time, end_time);
+    
+    // find out where it belongs in the infection_times vector (iterator form)
+    auto it_time = std::lower_bound(infection_times.begin(), infection_times.end(), new_time);
+    
+    // convert to int
+    int idx = static_cast<int>(std::distance(infection_times.begin(), it_time));
+    
+    // insert into infection_times
+    infection_times.insert(it_time, new_time);
+    
+    // insert a row of dummy values into infection_alleles
+    std::vector<bool> new_alleles(n_haplos, true);
+    infection_alleles.insert(infection_alleles.begin() + idx, std::move(new_alleles));
+    
     n_infections++;
+    
+    // get log-likelihood of proposed state, marginalized over idx
+    double loglike_prop = get_loglike_marginal_k(idx, lambda, theta, decay_rate, sens, infection_times);
+    
+    // get log ratio of proposed vs current prior
+    //double prior_ratio = log(n_infections) - log(lambda*(end_time - start_time));
+    //double prior_ratio = log(n_infections) - log(end_time - start_time);
+    double prior_ratio = log(lambda);
+    
+    // get log ratio of current vs. proposed
+    double propose_ratio = log(end_time - start_time) - log(n_infections);
+    
+    // calculate Metropolis-Hastings ratio
+    double MH = (loglike_prop - loglike_now) + prior_ratio + propose_ratio;
+    bool accept_move = (log(runif1(rng_state)) < MH);
+    
+    // accept or reject move
+    if (accept_move) {
+      
+      // Gibbs sample introduced haplos given new timings
+      update_w_mat_k(idx, lambda, theta, decay_rate, sens);
+    } else {
+      
+      // revert back to previous state
+      infection_times.erase(infection_times.begin() + idx);
+      infection_alleles.erase(infection_alleles.begin() + idx);
+      n_infections--;
+    }
     
   } else {  // drop infection
     if (n_infections == 0) {
       return;
     }
     
-    int tmp1 = sample2(rng_state, 0, n_infections - 1);
+    // draw which value to drop with equal probability
+    int idx = sample2(rng_state, 0, n_infections - 1);
     
-    infection_alleles.erase(infection_alleles.begin() + tmp1);
-    infection_times.erase(infection_times.begin() + tmp1);
+    // get log-likelihood of current state, marginalized over idx
+    double loglike_now = get_loglike_marginal_k(idx, lambda, theta, decay_rate, sens, infection_times);
+    
+    // store the alleles at this row in case we need to reinstate them
+    double store_time = infection_times[idx];
+    std::vector<bool> store_alleles = infection_alleles[idx];
+    
+    // drop values
+    infection_times.erase(infection_times.begin() + idx);
+    infection_alleles.erase(infection_alleles.begin() + idx);
     n_infections--;
+    
+    // get log-likelihood of proposed state
+    double loglike_prop = get_loglike_forward(lambda, theta, decay_rate, sens);
+    
+    // get log ratio of proposed vs current prior
+    //double prior_ratio = log(lambda*(end_time - start_time)) - log(n_infections + 1);
+    //double prior_ratio = log(end_time - start_time) - log(n_infections + 1);
+    double prior_ratio = -log(lambda);
+    
+    // get log ratio of current vs. proposed
+    double propose_ratio = log(n_infections + 1) - log(end_time - start_time);
+    
+    // calculate Metropolis-Hastings ratio
+    double MH = (loglike_prop - loglike_now) + prior_ratio + propose_ratio;
+    bool accept_move = (log(runif1(rng_state)) < MH);
+    
+    // accept or reject move
+    if (!accept_move) {
+      
+      // revert back to previous state
+      infection_times.insert(infection_times.begin() + idx, store_time);
+      infection_alleles.insert(infection_alleles.begin() + idx, store_alleles);
+      n_infections++;
+    }
     
   }
   

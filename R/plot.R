@@ -19,8 +19,10 @@
 #'       \code{haplo} and \code{time}, used to determine the number of
 #'       haplotypes (\code{n_haplo}) and observation times (\code{n_obs}).}
 #'   }
-#' @param ind Integer vector or \code{NULL}.  Which indices of
-#'   \code{sim_list$raw_list} to plot.  Defaults to all individuals.
+#' @param ind Integer vector or \code{NULL}. Which indices of
+#'   \code{sim_list$raw_list} to plot. Defaults to all individuals.
+#' @param nrow passed through to \code{ggplot2::facet_wrap()} to set the number
+#'   of rows when plotting multiple individuals.
 #'
 #' @return A \pkg{ggplot2} object with:
 #'   \itemize{
@@ -34,7 +36,7 @@
 #' @importFrom dplyr mutate
 #' @export
 
-plot_sim <- function(sim_list, ind = NULL) {
+plot_sim <- function(sim_list, ind = NULL, nrow = NULL) {
   
   # subset list
   if (is.null(ind)) {
@@ -57,6 +59,9 @@ plot_sim <- function(sim_list, ind = NULL) {
   
   # plot infection times
   df_t_inf <- mapply(function(x, i) {
+    if (length(x$t_inf) == 0) {
+      return(NULL)
+    }
     data.frame(ind = i,
                t_inf = x$t_inf)
   }, sim_list$raw_list, 1:n_ind, SIMPLIFY = FALSE) |>
@@ -64,7 +69,7 @@ plot_sim <- function(sim_list, ind = NULL) {
   
   plot1 <- ggplot(df_t_inf) + theme_bw() +
     geom_vline(aes(xintercept = t_inf), linetype = "dashed") +
-    facet_wrap(~ind) +
+    facet_wrap(~ind, nrow = nrow) +
     scale_x_continuous(limits = c(start_time, end_time))
   
   
@@ -139,11 +144,13 @@ plot_sim <- function(sim_list, ind = NULL) {
 #' @param df_data a data.frame with columns for \code{ind} (factor),
 #'   \code{haplo} (factor), \code{time} (numeric), and \code{positive}
 #'   (logical).
+#' @param nrow passed through to \code{ggplot2::facet_wrap()} to set the number
+#'   of rows when plotting multiple individuals.
 #'
 #' @import ggplot2
 #' @export
 
-plot_data <- function(df_data) {
+plot_data <- function(df_data, nrow = NULL) {
   
   # check inputs
   assert_dataframe(df_data)
@@ -154,7 +161,7 @@ plot_data <- function(df_data) {
   df_data |>
     ggplot() + theme_bw() +
     geom_point(aes(x = time, y = haplo, alpha = positive), size = 1) +
-    facet_wrap(~ind) +
+    facet_wrap(~ind, nrow = nrow) +
     theme(panel.grid = element_blank()) +
     guides(alpha = "none") +
     xlab("Time") + ylab("Haplotype")

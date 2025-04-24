@@ -4,7 +4,7 @@
 \alias{plot_sim}
 \title{Plot simulated infection trajectories}
 \usage{
-plot_sim(sim_list, ind = NULL)
+plot_sim(sim_list, ind = NULL, nrow = NULL)
 }
 \arguments{
 \item{sim_list}{A list with at least two elements:
@@ -18,8 +18,11 @@ plot_sim(sim_list, ind = NULL)
     haplotypes (\code{n_haplo}) and observation times (\code{n_obs}).}
 }}
 
-\item{ind}{Integer vector or \code{NULL}.  Which indices of
-\code{sim_list$raw_list} to plot.  Defaults to all individuals.}
+\item{ind}{Integer vector or \code{NULL}. Which indices of
+\code{sim_list$raw_list} to plot. Defaults to all individuals.}
+
+\item{nrow}{passed through to \code{ggplot2::facet_wrap()} to set the number
+of rows when plotting multiple individuals.}
 }
 \value{
 A \pkg{ggplot2} object with:

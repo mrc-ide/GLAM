@@ -51,7 +51,7 @@ public:
             std::vector<double> infection_times,
             std::vector<std::vector<bool>> infection_alleles);
   
-  void update_n_infections();
+  void update_n_infections(double lambda, double theta, double decay_rate, double sens);
   void update_infection_times(double lambda, double theta, double decay_rate, double sens);
   double get_loglike_marginal_k(int k, double lambda, double theta, double decay_rate, double sens,
                             std::vector<double> &inf_times);
