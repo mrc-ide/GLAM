@@ -92,7 +92,7 @@ void Particle::update() {
   
   // split-merge update steps on all individuals
   for (int i = 0; i < n_samp; ++i) {
-    indiv_vec[i].update_n_infections();
+    indiv_vec[i].update_n_infections(lambda, theta, decay_rate, sens);
   }
   
   // update all infection times

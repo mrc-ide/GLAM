@@ -45,7 +45,6 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
   assert_single_pos(theta, zero_allowed = FALSE)
   assert_single_pos(decay_rate)
   assert_single_bounded(sens)
-  assert_single_string(ind_name)
   if (!is.null(n_inf)) {
     assert_single_pos_int(n_inf)
   }
@@ -227,7 +226,7 @@ sim_cohort <- function(n, samp_time, haplo_freqs, lambda, theta, decay_rate, sen
                              theta = theta,
                              decay_rate = decay_rate,
                              sens = sens,
-                             ind_name = sprintf("ind%s", i),
+                             ind_name = i,
                              n_inf = n_inf[i],
                              return_full = return_full)
   }
