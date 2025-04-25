@@ -23,6 +23,7 @@ public:
   double end_time;
   int max_infections;
   dust::random::xoshiro256plus& rng_state;
+  bool interactive;
   
   int n_samp;
   int n_rungs;
@@ -53,6 +54,7 @@ public:
             double start_time,
             double end_time,
             int max_infections,
-            cpp11::sexp rng_ptr);
+            cpp11::sexp rng_ptr,
+            bool interactive);
   
 };

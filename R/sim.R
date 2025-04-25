@@ -25,14 +25,14 @@
 #' @param t_inf if \code{NULL} then timings of infections are drawn from the
 #'   model, but this parameter can also be used to manually set these values in
 #'   a manual vector.
-#' @param return_full Boolean (Default \code{FALSE}). If \code{TRUE} then
+#' @param return_full Boolean (Default \code{TRUE}). If \code{TRUE} then
 #'   return true values of hidden variables alongside observed data.
 #'
 #' @importFrom stats rbinom rexp rpois runif
 #' @export
 
 sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
-                    ind_name = "ind1", n_inf = NULL, t_inf = NULL, return_full = FALSE) {
+                    ind_name = "ind1", n_inf = NULL, t_inf = NULL, return_full = TRUE) {
   
   # check inputs
   assert_vector_numeric(samp_time)
@@ -203,7 +203,7 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
 #' @export
 
 sim_cohort <- function(n, samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
-                       n_inf = NULL, return_full = FALSE) {
+                       n_inf = NULL, return_full = TRUE) {
   
   # check inputs
   assert_vector_pos(lambda)

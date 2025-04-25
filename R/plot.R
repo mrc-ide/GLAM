@@ -57,24 +57,8 @@ plot_sim <- function(sim_list, ind = NULL, nrow = NULL) {
   }, sim_list$raw_list) |>
     max()
   
-  # plot infection times
-  df_t_inf <- mapply(function(x, i) {
-    if (length(x$t_inf) == 0) {
-      return(NULL)
-    }
-    data.frame(ind = i,
-               t_inf = x$t_inf)
-  }, sim_list$raw_list, 1:n_ind, SIMPLIFY = FALSE) |>
-    bind_rows()
-  
-  plot1 <- ggplot(df_t_inf) + theme_bw() +
-    geom_vline(aes(xintercept = t_inf), linetype = "dashed") +
-    facet_wrap(~ind, nrow = nrow) +
-    scale_x_continuous(limits = c(start_time, end_time))
-  
-  
-  # overlay starting infection segments
-  df_init_inf <- mapply(function(x, i) {
+  # get starting infection segments
+  df_init_segments <- mapply(function(x, i) {
     if (any(x$w_init)) {
       w <- which(x$w_init)
       data.frame(ind = i,
@@ -87,12 +71,18 @@ plot_sim <- function(sim_list, ind = NULL, nrow = NULL) {
   }, sim_list$raw_list, 1:n_ind, SIMPLIFY = FALSE) |>
     bind_rows()
   
-  plot1 <- plot1 +
-    geom_segment(aes(x = t_start, xend = t_clear, y = haplo), col = "pink", data = df_init_inf)
+  # get new infection times
+  df_t_inf <- mapply(function(x, i) {
+    if (length(x$t_inf) == 0) {
+      return(NULL)
+    }
+    data.frame(ind = i,
+               t_inf = x$t_inf)
+  }, sim_list$raw_list, 1:n_ind, SIMPLIFY = FALSE) |>
+    bind_rows()
   
-  
-  # overlay new infection segments
-  df_new_inf <- mapply(function(x, i) {
+  # get new infection segments
+  df_new_segments <- mapply(function(x, i) {
     if (any(x$w_inf)) {
       w <- which(x$w_inf, arr.ind = TRUE)
       data.frame(ind = i,
@@ -105,11 +95,7 @@ plot_sim <- function(sim_list, ind = NULL, nrow = NULL) {
   }, sim_list$raw_list, 1:n_ind, SIMPLIFY = FALSE) |>
     bind_rows()
   
-  plot1 <- plot1 +
-    geom_segment(aes(x = t_start, xend = t_clear, y = haplo), data = df_new_inf)
-  
-  
-  # overlay observed haplos
+  # get observed haplos
   df_haplo <- mapply(function(x, i) {
     data.frame(ind = i,
                time = x$samp_time,
@@ -123,13 +109,54 @@ plot_sim <- function(sim_list, ind = NULL, nrow = NULL) {
   }, sim_list$raw_list, 1:n_ind, SIMPLIFY = FALSE) |>
     bind_rows()
   
-  plot1 <- plot1 + 
-    geom_point(aes(x = time, y = haplo, col = state_combined), size = 2, data = df_haplo) +
-    scale_color_manual(values = c("#00000010", "firebrick1", 'dodgerblue'),
-                       labels = c("Absent, unobserved",
-                                  "Present, unobserved",
-                                  "Present, observed"), 
-                       name = "Observed status")
+  # 1. base plot: theme + facets + x‐limits
+  plot1 <- ggplot() +
+    theme_bw() +
+    facet_wrap(~ind, nrow = nrow) +
+    scale_x_continuous(limits = c(start_time, end_time))
+  
+  # 2. dashed infection‐time lines, only if there are any
+  if (nrow(df_t_inf) > 0) {
+    plot1 <- plot1 +
+      geom_vline(
+        data = df_t_inf,
+        aes(xintercept = t_inf),
+        linetype = "dashed"
+      )
+  }
+  
+  # 3. initial infection segments (pink)
+  if (nrow(df_init_segments) > 0) {
+  plot1 <- plot1 +
+      geom_segment(
+        data = df_init_segments,
+        aes(x = t_start, xend = t_clear, y = haplo),
+        colour = "pink"
+      )
+  }
+  
+  # 4. new infection segments
+  if (nrow(df_new_segments) > 0) {
+    plot1 <- plot1 +
+      geom_segment(
+        data = df_new_segments,
+        aes(x = t_start, xend = t_clear, y = haplo),
+        inherit.aes = FALSE
+      )
+  }
+  
+  # 5. finally, the observed haplotypes
+  plot1 <- plot1 +
+    geom_point(
+      data = df_haplo,
+      aes(x = time, y = haplo, colour = state_combined),
+      size = 2
+    ) +
+    scale_color_manual(
+      values = c("#00000010", "firebrick1", "dodgerblue"),
+      labels = c("Absent, unobserved", "Present, unobserved", "Present, observed"),
+      name   = "Observed status"
+    )
   
   plot1
 }

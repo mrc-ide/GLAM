@@ -14,7 +14,7 @@ sim_ind(
   ind_name = "ind1",
   n_inf = NULL,
   t_inf = NULL,
-  return_full = FALSE
+  return_full = TRUE
 )
 }
 \arguments{
@@ -40,7 +40,7 @@ model, but this parameter can also be used to manually set this value.}
 model, but this parameter can also be used to manually set these values in
 a manual vector.}
 
-\item{return_full}{Boolean (Default \code{FALSE}). If \code{TRUE} then
+\item{return_full}{Boolean (Default \code{TRUE}). If \code{TRUE} then
 return true values of hidden variables alongside observed data.}
 }
 \description{
