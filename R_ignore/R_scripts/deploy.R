@@ -12,7 +12,7 @@ library(ggplot2)
 library(tidyverse)
 library(dust)
 
-set.seed(2)
+#set.seed(2)
 
 # ------------------------------------------------------------------
 
@@ -78,13 +78,15 @@ g$init(start_time = 0,
        sens = NULL,
        n_infections = NULL, 
        infection_times = NULL,
-       max_infections = max_infections, 
-       w_list = NULL)
+       w_list = NULL,
+       max_infections = max_infections)
 
-g$burn(iterations = 1e3)
+g$burn(iterations = 1e2)
 t0 <- Sys.time()
-g$sample(iterations = 1e4)
+g$sample(iterations = 1e3)
 Sys.time() - t0
+
+g
 
 # -----------------------
 
@@ -116,7 +118,7 @@ df_n_infections |>
   geom_histogram(aes(x = value), binwidth = 1, boundary = -0.5) +
   geom_vline(aes(xintercept = n_inf), linetype = "dashed", data = df_n_inf_true) +
   facet_wrap(~ind) +
-  scale_x_continuous(breaks = 0:max_infections, limits = c(0, max_infections)) +
+  scale_x_continuous(breaks = 0:max_infections) +
   theme(panel.grid.minor = element_blank()) +
   xlab("Number of infections")
 

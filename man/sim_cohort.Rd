@@ -13,7 +13,7 @@ sim_cohort(
   decay_rate,
   sens,
   n_inf = NULL,
-  return_full = FALSE
+  return_full = TRUE
 )
 }
 \arguments{
@@ -36,7 +36,7 @@ Must be at least two unique time points increasing in value.}
 model, but this parameter can also be used to manually set this value. If
 so, input as a vector over individuals.}
 
-\item{return_full}{Boolean (Default \code{FALSE}). If \code{TRUE} then
+\item{return_full}{Boolean (Default \code{TRUE}). If \code{TRUE} then
 return true values of hidden variables alongside observed data.}
 }
 \description{

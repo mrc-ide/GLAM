@@ -24,7 +24,8 @@ list mcmc_cpp(cpp11::list data_list,
               double start_time,
               double end_time,
               int max_infections,
-              cpp11::sexp rng_ptr) {
+              cpp11::sexp rng_ptr,
+              const bool interactive) {
   
   // start timer
   std::chrono::high_resolution_clock::time_point t0 =  std::chrono::high_resolution_clock::now();
@@ -47,7 +48,8 @@ list mcmc_cpp(cpp11::list data_list,
            start_time,
            end_time,
            max_infections,
-           rng_ptr);
+           rng_ptr,
+           interactive);
   
   // initialise MCMC
   MCMC mcmc(sys.rng_state);
@@ -119,7 +121,8 @@ void debug_algo1_cpp(cpp11::list data_list,
            start_time,
            end_time,
            max_infections,
-           rng_ptr);
+           rng_ptr,
+           true);
   
   // initialise MCMC, which will run the debugging step
   MCMC mcmc(sys.rng_state);

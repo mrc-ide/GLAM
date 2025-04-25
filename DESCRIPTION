@@ -30,7 +30,8 @@ Imports:
     ggplot2,
     dust,
     R6,
-    tidyr
+    tidyr,
+    progress
 Remotes:
   mrc-ide/dust
 BugReports: https://github.com/mrc-ide/GLAM

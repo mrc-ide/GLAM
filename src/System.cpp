@@ -19,7 +19,8 @@ void System::init(cpp11::list data_list,
                  double start_time,
                  double end_time,
                  int max_infections,
-                 cpp11::sexp rng_ptr) {
+                 cpp11::sexp rng_ptr,
+                 bool interactive) {
   
   // copy over values
   this->data_list = data_list;
@@ -32,6 +33,7 @@ void System::init(cpp11::list data_list,
   this->start_time = start_time;
   this->end_time = end_time;
   this->max_infections = max_infections;
+  this->interactive = interactive;
   
   n_samp = data_list.size();
   n_rungs = beta.size();

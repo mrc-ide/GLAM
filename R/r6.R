@@ -10,6 +10,7 @@
 #' @import R6
 #' @import dust
 #' @importFrom tidyr pivot_wider
+#' @import progress
 #' @export
 glam_mcmc <- R6::R6Class(
   classname = "glam_mcmc",
@@ -22,23 +23,32 @@ glam_mcmc <- R6::R6Class(
     ### Public functions ###
     
     #--------------------
-    #' @description
-    #' Load data into the glam_mcmc object.
-    #' 
-    #' @param df_data a data.frame of data.
-    initialize = function(df_data) {
+    #' @title Initialize the object with haplotype‐time series data
+    #'
+    #' @description Performs input validation on `df_data`.
+    #'
+    #' @param df_data A data.frame or tibble. Must contain the columns:
+    #'   - `ind` (identifier for each sample/individual),
+    #'   - `haplo` (haplotype label),
+    #'   - `time` (observation time point),
+    #'   - `positive` (binary indicator: 0 or 1).
+    #' @param silent Logical scalar. If `FALSE` (the default), informational
+    #'   messages about loading progress and data summary are printed to the
+    #'   console. If `TRUE`, message printing is suppressed.
+    #'
+    #' @return Invisibly returns `NULL`. This is an R6 “initialize” method and
+    #'   is used for its side effects on the object’s private fields.
+    initialize = function(df_data, silent = FALSE) {
       
       # input checks
       assert_dataframe(df_data)
+      assert_in(c("ind", "haplo", "time", "positive"), names(df_data),
+                message = "input data must have columns: ind, haplo, time, positive")
+      assert_in(df_data$positive, c(0,1), message = "`positive` column must contain 0 or 1")
       
-      # convert ind to factor
-      df_data <- df_data |>
-        dplyr::mutate(ind = factor(ind, levels = unique(ind)))
-      if (!all(sort(df_data$ind) == df_data$ind)) {
-        stop("data must be ordered by the ind column")
+      if (!silent) {
+        message("Loading data")
       }
-      
-      message("Loading data")
       
       # get sample info
       private$df_data <- df_data
@@ -69,12 +79,14 @@ glam_mcmc <- R6::R6Class(
       private$obs_time_list <- obs_time_list
       
       # print summary of data import
-      message(sprintf("%s samples", private$n_samp))
-      message(sprintf("%s haplotypes", private$n_haplos))
-      if (length(unique(obs_time_list)) == 1) {
-        message(sprintf("%s observation times, identical for all samples", length(obs_time_list[[1]])))
-      } else {
-        message("variable observation times between samples")
+      if (!silent) {
+        message(sprintf("%s samples", private$n_samp))
+        message(sprintf("%s haplotypes", private$n_haplos))
+        if (length(unique(obs_time_list)) == 1) {
+          message(sprintf("%s observation times, identical for all samples", length(obs_time_list[[1]])))
+        } else {
+          message("variable observation times between samples")
+        }
       }
       
     },
@@ -465,10 +477,16 @@ glam_mcmc <- R6::R6Class(
       }
       message("")
       
-      message("MCMC")
-      message("--------")
-      
-      message(sprintf("Tuning: %s iterations", 0))
+      if (private$burn_called) {
+        message("MCMC")
+        message("--------")
+        
+        burnin_iterations <- sum(mapply(function(x) x$burn, private$iteration_counter))
+        message(sprintf("Burn-in: %s iterations", burnin_iterations))
+        
+        sampling_iterations <- sum(mapply(function(x) x$sample, private$iteration_counter))
+        message(sprintf("Sampling: %s iterations", sampling_iterations))
+      }
       
       # return invisibly
       invisible(self)
@@ -555,15 +573,20 @@ glam_mcmc <- R6::R6Class(
                                private$start_time,                                # start_time
                                private$end_time,                                  # end_time
                                private$max_infections,                            # max infections
-                               private$rng_list[[chain]]                          # rng_ptr
+                               private$rng_list[[chain]],                         # rng_ptr
+                               interactive()                                      # logical; if running interactively. Useful for supressing progress bars when running Rmarkdown
         )
         
         # sync RNG
         private$rng_list[[chain]]$sync()
         
         # convert raw output objects if needed
-        acceptance_out <- matrix(unlist(output_raw$acceptance_out), nrow = length(output_raw$acceptance_out), byrow = TRUE)
-        n_infections <- matrix(unlist(output_raw$n_infections), nrow = length(output_raw$n_infections), byrow = TRUE)
+        acceptance_out <- matrix(unlist(output_raw$acceptance_out),
+                                 nrow = length(output_raw$acceptance_out),
+                                 byrow = TRUE)
+        n_infections <- matrix(unlist(output_raw$n_infections),
+                               nrow = length(output_raw$n_infections),
+                               byrow = TRUE)
         
         # update params_list to final values of chain
         private$param_list[[chain]] <- output_raw$param_list_out

@@ -114,7 +114,9 @@ void MCMC::run_mcmc(bool burnin, int iterations) {
   
   // run loop
   for (int i = start_i; i < iterations; ++i) {
-    progress.tick();
+    if (sys->interactive) {
+      progress.tick();
+    }
     
     // update particles
     for (int r = 0; r < n_rungs; ++r) {
