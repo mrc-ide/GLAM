@@ -12,7 +12,7 @@ library(ggplot2)
 library(tidyverse)
 library(dust)
 
-set.seed(2)
+set.seed(1)
 
 # ------------------------------------------------------------------
 
@@ -65,26 +65,29 @@ df_inf_time_true <- mapply(function(i) {
 
 # -----------------------
 
+# define priors
+lambda_prior <- function(x) dlnorm_reparam(x, mean = 0.5, sd = 0.2, return_log = TRUE)
+theta_prior <- function(x) dlnorm_reparam(x, mean = 3, sd = 3, return_log = TRUE)
+decay_rate_prior <- function(x) dlnorm_reparam(x, mean = 0.5, sd = 0.2, return_log = TRUE)
+sens_prior <- function(x) dbeta(x, shape1 = 99, shape2 = 1, log = TRUE)
+
 g <- glam_mcmc$new(df_data = sim1$df_data)
 
-g$init(start_time = 0, 
-       end_time = 10, 
-       chains = 1, 
-       rungs = 1, 
+g$init(lambda_prior = lambda_prior,
+       theta_prior = theta_prior,
+       decay_rate_prior = decay_rate_prior,
+       sens_prior = sens_prior,
        haplo_freqs = haplo_freqs,
-       lambda = NULL, 
-       theta = NULL, 
-       decay_rate = NULL, 
-       sens = NULL,
-       n_infections = NULL, 
-       infection_times = NULL,
-       max_infections = max_infections, 
-       w_list = NULL)
+       chains = 1, 
+       max_infections = max_infections)
 
-g$burn(iterations = 1e3)
+g$burn(iterations = 1e2)
+
 t0 <- Sys.time()
-g$sample(iterations = 1e4)
+g$sample(iterations = 1e3)
 Sys.time() - t0
+
+g
 
 # -----------------------
 
@@ -116,7 +119,7 @@ df_n_infections |>
   geom_histogram(aes(x = value), binwidth = 1, boundary = -0.5) +
   geom_vline(aes(xintercept = n_inf), linetype = "dashed", data = df_n_inf_true) +
   facet_wrap(~ind) +
-  scale_x_continuous(breaks = 0:max_infections, limits = c(0, max_infections)) +
+  scale_x_continuous(breaks = 0:max_infections) +
   theme(panel.grid.minor = element_blank()) +
   xlab("Number of infections")
 

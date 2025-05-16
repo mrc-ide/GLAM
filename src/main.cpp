@@ -13,18 +13,23 @@ namespace writable = cpp11::writable;
 [[cpp11::register]]
 list mcmc_cpp(cpp11::list data_list,
               cpp11::list obs_time_list,
+              const doubles obs_time_start,
+              const doubles obs_time_end,
               const doubles haplo_freqs,
               const int iterations,
               const bool burnin,
               list param_list,
               list param_update_list,
               list proposal_sd,
+              cpp11::function lambda_prior,
+              cpp11::function theta_prior,
+              cpp11::function decay_rate_prior,
+              cpp11::function sens_prior,
               const int iteration_counter_init,
               const doubles beta,
-              double start_time,
-              double end_time,
               int max_infections,
-              cpp11::sexp rng_ptr) {
+              cpp11::sexp rng_ptr,
+              const bool interactive) {
   
   // start timer
   std::chrono::high_resolution_clock::time_point t0 =  std::chrono::high_resolution_clock::now();
@@ -38,16 +43,21 @@ list mcmc_cpp(cpp11::list data_list,
   System sys(rng_state);
   sys.init(data_list,
            obs_time_list,
+           obs_time_start,
+           obs_time_end,
            haplo_freqs,
            param_list,
            param_update_list,
            proposal_sd,
+           lambda_prior,
+           theta_prior,
+           decay_rate_prior,
+           sens_prior,
            iteration_counter_init,
            beta,
-           start_time,
-           end_time,
            max_infections,
-           rng_ptr);
+           rng_ptr,
+           interactive);
   
   // initialise MCMC
   MCMC mcmc(sys.rng_state);
@@ -57,11 +67,12 @@ list mcmc_cpp(cpp11::list data_list,
             proposal_sd,
             beta);
   
+  
+  
   // run main loop
-  mcmc.run_mcmc(true, iterations);
+  mcmc.run_mcmc(burnin, iterations);
   
   // get output objects into cpp11 format
-  writable::list acceptance_out = mat_int_to_list(mcmc.acceptance_out);
   writable::list n_infections = mat_int_to_list(mcmc.n_infections_store);
   writable::list infection_times = array_double_to_list(mcmc.infection_times_store);
   
@@ -79,7 +90,7 @@ list mcmc_cpp(cpp11::list data_list,
     "n_infections"_nm = n_infections,
     "infection_times"_nm = infection_times,
     "param_list_out"_nm = mcmc.param_list_out,
-    "acceptance_out"_nm = acceptance_out,
+    "prop_sd_list_out"_nm = mcmc.prop_sd_list_out,
     "swap_acceptance_out"_nm = mcmc.swap_acceptance_out,
     "dur"_nm = dur,
     "rng_ptr"_nm = rng_ptr
@@ -91,13 +102,17 @@ list mcmc_cpp(cpp11::list data_list,
 [[cpp11::register]]
 void debug_algo1_cpp(cpp11::list data_list,
                      cpp11::list obs_time_list,
+                     const doubles obs_time_start,
+                     const doubles obs_time_end,
                      const doubles haplo_freqs,
                      list param_list,
                      list param_update_list,
                      list proposal_sd,
+                     cpp11::function lambda_prior,
+                     cpp11::function theta_prior,
+                     cpp11::function decay_rate_prior,
+                     cpp11::function sens_prior,
                      const doubles beta,
-                     double start_time,
-                     double end_time,
                      int max_infections,
                      cpp11::sexp rng_ptr) {
   
@@ -110,16 +125,21 @@ void debug_algo1_cpp(cpp11::list data_list,
   System sys(rng_state);
   sys.init(data_list,
            obs_time_list,
+           obs_time_start,
+           obs_time_end,
            haplo_freqs,
            param_list,
            param_update_list,
            proposal_sd,
+           lambda_prior,
+           theta_prior,
+           decay_rate_prior,
+           sens_prior,
            0,
            beta,
-           start_time,
-           end_time,
            max_infections,
-           rng_ptr);
+           rng_ptr,
+           true);
   
   // initialise MCMC, which will run the debugging step
   MCMC mcmc(sys.rng_state);

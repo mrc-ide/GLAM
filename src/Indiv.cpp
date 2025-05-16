@@ -14,6 +14,8 @@ namespace writable = cpp11::writable;
 void Indiv::init(System &sys,
                  std::vector<std::vector<bool>> data_bool,
                  std::vector<double> obs_times,
+                 double start_time,
+                 double end_time,
                  int n_infections,
                  std::vector<double> infection_times,
                  std::vector<std::vector<bool>> infection_alleles) {
@@ -28,13 +30,13 @@ void Indiv::init(System &sys,
   data = data_bool;
   n_haplos = data.size();
   this->obs_times = obs_times;
+  this->start_time = start_time;
+  this->end_time = end_time;
   haplo_freqs = sys.haplo_freqs;
   n_obs = data[0].size();
   this->n_infections = n_infections;
   this->infection_times = infection_times;
   this->infection_alleles = infection_alleles;
-  this->start_time = sys.start_time;
-  this->end_time = sys.end_time;
   this->max_infections = sys.max_infections;
   
   // sanity checks on inputs
@@ -70,6 +72,7 @@ void Indiv::update_n_infections(double lambda, double theta, double decay_rate, 
     double new_time = runif1(rng_state, start_time, end_time);
     
     // find out where it belongs in the infection_times vector (iterator form)
+    // so we can insert while maintaining sorting in increasing value
     auto it_time = std::lower_bound(infection_times.begin(), infection_times.end(), new_time);
     
     // convert to int
@@ -88,8 +91,6 @@ void Indiv::update_n_infections(double lambda, double theta, double decay_rate, 
     double loglike_prop = get_loglike_marginal_k(idx, lambda, theta, decay_rate, sens, infection_times);
     
     // get log ratio of proposed vs current prior
-    //double prior_ratio = log(n_infections) - log(lambda*(end_time - start_time));
-    //double prior_ratio = log(n_infections) - log(end_time - start_time);
     double prior_ratio = log(lambda);
     
     // get log ratio of current vs. proposed
@@ -136,8 +137,6 @@ void Indiv::update_n_infections(double lambda, double theta, double decay_rate, 
     double loglike_prop = get_loglike_forward(lambda, theta, decay_rate, sens);
     
     // get log ratio of proposed vs current prior
-    //double prior_ratio = log(lambda*(end_time - start_time)) - log(n_infections + 1);
-    //double prior_ratio = log(end_time - start_time) - log(n_infections + 1);
     double prior_ratio = -log(lambda);
     
     // get log ratio of current vs. proposed
@@ -162,7 +161,9 @@ void Indiv::update_n_infections(double lambda, double theta, double decay_rate, 
 
 //------------------------------------------------
 // update timings of all infections
-void Indiv::update_infection_times(double lambda, double theta, double decay_rate, double sens) {
+void Indiv::update_infection_times(double lambda, double theta, double decay_rate, double sens,
+                                   bool burnin, double &t_inf_prop_sd, int iter) {
+  
   if (sys->infection_times_fixed) {
     return;
   }
@@ -170,8 +171,16 @@ void Indiv::update_infection_times(double lambda, double theta, double decay_rat
   std::vector<double> infection_times_prop = infection_times;
   for (int k = 0; k < n_infections; ++k) {
     
-    // propose new value
-    infection_times_prop[k] = rnorm1_interval(rng_state, infection_times[k], 3, start_time, end_time);
+    // propose new value within interval
+    double bound_lower = start_time;
+    double bound_upper = end_time;
+    if (k > 0) {
+      bound_lower = infection_times[k - 1];
+    }
+    if (k < (n_infections - 1)) {
+      bound_upper = infection_times[k + 1];
+    }
+    infection_times_prop[k] = rnorm1_interval(rng_state, infection_times[k], t_inf_prop_sd, bound_lower, bound_upper);
     
     // calculate loglikelihood of current and proposed state
     double loglike_now = get_loglike_marginal_k(k, lambda, theta, decay_rate, sens, infection_times);
@@ -189,9 +198,20 @@ void Indiv::update_infection_times(double lambda, double theta, double decay_rat
       if (!sys->w_list_fixed) {
         update_w_mat_k(k, lambda, theta, decay_rate, sens);
       }
+      
+      // Robbins Monroe step
+      if (burnin && (t_inf_prop_sd < (end_time - start_time))) {
+        t_inf_prop_sd = exp(log(t_inf_prop_sd) + (1 - 0.23) / iter);
+      }
     } else {
       infection_times_prop[k] = infection_times[k];
+      
+      // Robbins Monroe step
+      if (burnin) {
+        t_inf_prop_sd = exp(log(t_inf_prop_sd) - 0.23 / iter);
+      }
     }
+    
   }
   
 }
@@ -201,7 +221,7 @@ void Indiv::update_infection_times(double lambda, double theta, double decay_rat
 double Indiv::get_loglike_marginal_k(int k, double lambda, double theta, double decay_rate, double sens,
                                      std::vector<double> &inf_times) {
   
-  // populate vectors of success and failure probabilities
+  // populate vectors of (logged) success and failure probabilities
   for (int j = 0; j < n_haplos; ++j) {
     S_vec[j] = algorithm1(j, lambda, theta, decay_rate, sens, inf_times, k, true);
     F_vec[j] = algorithm1(j, lambda, theta, decay_rate, sens, inf_times, k, false);
@@ -211,8 +231,8 @@ double Indiv::get_loglike_marginal_k(int k, double lambda, double theta, double 
   double l2 = -theta;
   for (int j = 0; j < n_haplos; ++j) {
     double q = 1.0 - exp(-theta * haplo_freqs[j]);
-    l1 += log(q*S_vec[j] + (1.0 - q)*F_vec[j]);
-    l2 += log(F_vec[j]);
+    l1 += log(q) + S_vec[j] + log(1.0 + (1.0/q - 1.0)*exp(F_vec[j] - S_vec[j]));
+    l2 += F_vec[j];
   }
   double ret = l1 + log(1.0 - exp(l2 - l1));
   ret -= log(1.0 - exp(-theta));
@@ -236,7 +256,7 @@ void Indiv::update_w_mat(double lambda, double theta, double decay_rate, double 
 // Gibbs sampler on kth infection of W matrix
 void Indiv::update_w_mat_k(int k, double lambda, double theta, double decay_rate, double sens) {
   
-  // populate vectors of success and failure probabilities
+  // populate vectors of (logged) success and failure probabilities
   for (int j = 0; j < n_haplos; ++j) {
     S_vec[j] = algorithm1(j, lambda, theta, decay_rate, sens, infection_times, k, true);
     F_vec[j] = algorithm1(j, lambda, theta, decay_rate, sens, infection_times, k, false);
@@ -248,7 +268,7 @@ void Indiv::update_w_mat_k(int k, double lambda, double theta, double decay_rate
     
     // calculate basic probability
     double q = 1.0 - exp(-theta * haplo_freqs[j]);
-    double prob_success = q*S_vec[j] / (q*S_vec[j] + (1 - q)*F_vec[j]);
+    double prob_success = q / (q + (1 - q)*exp(F_vec[j] - S_vec[j]));
     
     // modify probability if no success seen so far
     if (no_success) {
@@ -256,8 +276,8 @@ void Indiv::update_w_mat_k(int k, double lambda, double theta, double decay_rate
       double log_b = 0.0;
       for (int l = j; l < n_haplos; ++l) {
         double ql = 1.0 - exp(-theta * haplo_freqs[l]);
-        log_a += log(ql*S_vec[l] + (1 - ql)*F_vec[l]);
-        log_b += log((1 - ql)*F_vec[l]);
+        log_a += log(ql) + S_vec[l] + log(1.0 + (1.0/q - 1)*exp(F_vec[l] - S_vec[j]));
+        log_b += log(1 - ql) + F_vec[l];
       }
       prob_success /= (1.0 - exp(log_b - log_a));
     }
@@ -297,7 +317,7 @@ double Indiv::get_loglike_forward(double lambda, double theta, double decay_rate
   
   double ret = 0.0;
   for (int j = 0; j < n_haplos; ++j) {
-    ret += log(algorithm1(j, lambda, theta, decay_rate, sens, infection_times, -1, true));
+    ret += algorithm1(j, lambda, theta, decay_rate, sens, infection_times, -1, true);
   }
   return ret;
 }
@@ -307,6 +327,8 @@ double Indiv::get_loglike_forward(double lambda, double theta, double decay_rate
 double Indiv::algorithm1(int haplo_i, double lambda, double theta, double decay_rate, double sens,
                          std::vector<double> &inf_times, int override_k, bool override_value) {
   
+  // extract key parameters and calculate starting values of A and B based on
+  // equilibrium arguments
   int n_inf = inf_times.size();
   double p = sys->haplo_freqs[haplo_i];
   double q = 1.0 - exp(-theta*p);
@@ -315,6 +337,7 @@ double Indiv::algorithm1(int haplo_i, double lambda, double theta, double decay_
   double prob_given_neg = 1 - data[haplo_i][0];
   double A = prob_equilib * prob_given_pos;
   double B = (1 - prob_equilib) * prob_given_neg;
+  double log_running = 0;
   
 #ifdef DEBUG_ALGO1
   std::stringstream ss;
@@ -322,11 +345,11 @@ double Indiv::algorithm1(int haplo_i, double lambda, double theta, double decay_
   cpp11::message(ss.str());
 #endif
   
-  int i = 1;
-  int c = 0;
+  int i = 1; // indexes sampling times, starting from second
+  int c = 0; // indexes infections
   double tau = start_time;
   bool next_is_infection = false;
-  while (tau < end_time) {
+  while (i < obs_times.size()) {
     
     // work out if next event is an infection or an observation
     if ((n_inf == 0) || (c == n_inf)) {
@@ -341,6 +364,7 @@ double Indiv::algorithm1(int haplo_i, double lambda, double theta, double decay_
     
     // implement changes
     if (next_is_infection) {
+      
       bool w = infection_alleles[c][haplo_i];
       if (c == override_k) {
         w = override_value;
@@ -348,20 +372,26 @@ double Indiv::algorithm1(int haplo_i, double lambda, double theta, double decay_
       double T11 = exp(-decay_rate * (inf_times[c] - tau));
       double A_new = w*(A + B) + (1 - w)*A*T11;
       double B_new = (1 - w)*(A*(1 - T11) + B);
-      A = A_new;
-      B = B_new;
+      log_running += log(A_new + B_new);
+      A = A_new / (A_new + B_new);
+      B = B_new / (A_new + B_new);
       tau = inf_times[c];
       c++;
+      
     } else {
+      
+      bool data_i = data[haplo_i][i];
       double T11 = exp(-decay_rate * (obs_times[i] - tau));
-      double prob_given_pos = data[haplo_i][i]*sens + (1 - data[haplo_i][i])*(1 - sens);
-      double prob_given_neg = 1 - data[haplo_i][i];
+      double prob_given_pos = data_i*sens + (1 - data_i)*(1 - sens);
+      double prob_given_neg = 1 - data_i;
       double A_new = A*T11*prob_given_pos;
       double B_new = (A*(1 - T11) + B)*prob_given_neg;
-      A = A_new;
-      B = B_new;
+      log_running += log(A_new + B_new);
+      A = A_new / (A_new + B_new);
+      B = B_new / (A_new + B_new);
       tau = obs_times[i];
       i++;
+      
     }
     
 #ifdef DEBUG_ALGO1
@@ -376,7 +406,7 @@ double Indiv::algorithm1(int haplo_i, double lambda, double theta, double decay_
 #endif
   }
   
-  return A + B;
+  return log_running;
 }
 
 //------------------------------------------------

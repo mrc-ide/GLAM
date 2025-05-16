@@ -26,7 +26,6 @@ void MCMC::init(System &sys,
   
   // extract proposal sd
   proposal_sd_mat = list_to_mat_double(proposal_sd);
-  n_proposal_sd = proposal_sd_mat[0].size();
   
   // initialise particles
   particle_vec = std::vector<Particle>(n_rungs, Particle(rng_state));
@@ -76,7 +75,6 @@ void MCMC::init(System &sys,
   
   // initialise counters
   iteration_counter = sys.iteration_counter_init + 1;
-  acceptance_out = std::vector<std::vector<int>>(n_rungs, std::vector<int>(n_proposal_sd));
   swap_acceptance_out = std::vector<int>(n_rungs - 1);
   
 }
@@ -114,17 +112,21 @@ void MCMC::run_mcmc(bool burnin, int iterations) {
   
   // run loop
   for (int i = start_i; i < iterations; ++i) {
-    progress.tick();
+    if (sys->interactive) {
+      progress.tick();
+    }
+    
+    int iter = sys->iteration_counter_init + i + 1;
     
     // update particles
     for (int r = 0; r < n_rungs; ++r) {
-      particle_vec[r].update();
+      particle_vec[r].update(burnin, iter);
     }
     
     // TODO - Metropolis coupling
-    for (int r = 0; r < (n_rungs - 1); ++r) {
-      swap_acceptance_out[r]++;
-    }
+    //for (int r = 0; r < (n_rungs - 1); ++r) {
+    //  swap_acceptance_out[r]++;
+    //}
     
     // store results
     lambda_store[i] = particle_vec[0].lambda;
@@ -149,6 +151,18 @@ void MCMC::run_mcmc(bool burnin, int iterations) {
       "w_list"_nm = particle_vec[r].get_w_list()
     });
     param_list_out.push_back(tmp);
+  }
+  
+  // store final proposal SD
+  for (int r = 0; r < n_rungs; ++r) {
+    writable::list tmp({
+      "lambda"_nm = particle_vec[r].lambda_prop_sd,
+      "theta"_nm = particle_vec[r].theta_prop_sd,
+      "decay"_nm = particle_vec[r].decay_rate_prop_sd,
+      "sens"_nm = particle_vec[r].sens_prop_sd,
+      "t_inf"_nm = particle_vec[r].t_inf_prop_sd
+    });
+    prop_sd_list_out.push_back(tmp);
   }
   
 }

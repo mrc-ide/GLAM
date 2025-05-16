@@ -47,12 +47,15 @@ public:
   void init(System &sys,
             std::vector<std::vector<bool>> data_bool,
             std::vector<double> obs_times,
+            double start_time,
+            double end_time,
             int n_infections,
             std::vector<double> infection_times,
             std::vector<std::vector<bool>> infection_alleles);
   
   void update_n_infections(double lambda, double theta, double decay_rate, double sens);
-  void update_infection_times(double lambda, double theta, double decay_rate, double sens);
+  void update_infection_times(double lambda, double theta, double decay_rate, double sens,
+                              bool burnin, double &t_inf_prop_sd, int iter);
   double get_loglike_marginal_k(int k, double lambda, double theta, double decay_rate, double sens,
                             std::vector<double> &inf_times);
   void update_w_mat(double lambda, double theta, double decay_rate, double sens);

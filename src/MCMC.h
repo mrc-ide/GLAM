@@ -24,11 +24,9 @@ public:
   
   // proposal sd
   std::vector<std::vector<double>> proposal_sd_mat;
-  int n_proposal_sd;
   
   // counters
   int iteration_counter;
-  std::vector<std::vector<int>> acceptance_out;
   std::vector<int> swap_acceptance_out;
   
   // objects for storing results
@@ -39,6 +37,7 @@ public:
   std::vector<std::vector<int>> n_infections_store;
   std::vector<std::vector<std::vector<double>>> infection_times_store;
   cpp11::writable::list param_list_out;
+  cpp11::writable::list prop_sd_list_out;
   
   // RNG
   dust::random::xoshiro256plus& rng_state;

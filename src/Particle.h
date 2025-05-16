@@ -33,8 +33,11 @@ public:
   double loglike_forward;
   
   // proposal sd
-  std::vector<double> proposal_sd_vec;
-  int n_proposal_sd;
+  double lambda_prop_sd;
+  double theta_prop_sd;
+  double decay_rate_prop_sd;
+  double sens_prop_sd;
+  double t_inf_prop_sd;
   
   // Indiv objects
   std::vector<Indiv> indiv_vec;
@@ -60,13 +63,17 @@ public:
             std::vector<double> proposal_sd,
             double beta);
   
-  void update();
+  void update(bool burnin, int iter);
   double get_loglike_forward(double lambda_, double theta_, double decay_rate_, double sens_);
   double get_loglike_w(double theta_);
-  void update_lambda();
-  void update_theta();
-  void update_decay_rate();
-  void update_sens();
+  void update_lambda(bool burnin, int iter);
+  void update_theta(bool burnin, int iter);
+  void update_decay_rate(bool burnin, int iter);
+  void update_sens(bool burnin, int iter);
   cpp11::list get_w_list();
+  double get_logprior_lambda(double x);
+  double get_logprior_theta(double x);
+  double get_logprior_decay_rate(double x);
+  double get_logprior_sens(double x);
   
 };
