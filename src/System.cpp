@@ -10,14 +10,18 @@ namespace writable = cpp11::writable;
 // initialise
 void System::init(cpp11::list data_list,
                  cpp11::list obs_time_list,
+                 cpp11::doubles obs_time_start,
+                 cpp11::doubles obs_time_end,
                  const cpp11::doubles haplo_freqs,
                  cpp11::list param_list,
                  cpp11::list param_update_list,
                  cpp11::list proposal_sd,
+                 cpp11::function lambda_prior,
+                 cpp11::function theta_prior,
+                 cpp11::function decay_rate_prior,
+                 cpp11::function sens_prior,
                  int iteration_counter_init,
                  cpp11::doubles beta,
-                 double start_time,
-                 double end_time,
                  int max_infections,
                  cpp11::sexp rng_ptr,
                  bool interactive) {
@@ -25,13 +29,17 @@ void System::init(cpp11::list data_list,
   // copy over values
   this->data_list = data_list;
   this->obs_time_list = obs_time_list;
+  this->obs_time_start = obs_time_start;
+  this->obs_time_end = obs_time_end;
   this->param_list = param_list;
   this->param_update_list = param_update_list;
   this->proposal_sd = proposal_sd;
+  this->lambda_prior = lambda_prior;
+  this->theta_prior = theta_prior;
+  this->decay_rate_prior = decay_rate_prior;
+  this->sens_prior = sens_prior;
   this->iteration_counter_init = iteration_counter_init;
   this->beta = beta;
-  this->start_time = start_time;
-  this->end_time = end_time;
   this->max_infections = max_infections;
   this->interactive = interactive;
   

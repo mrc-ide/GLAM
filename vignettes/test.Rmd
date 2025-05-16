@@ -40,8 +40,9 @@ sim2 <- sim_cohort(n = 5,
 
 g <- glam_mcmc$new(df_data = sim2$df_data)
 
-g$init(start_time = 0, end_time = 10, chains = 2,
-       n_infections = n_infections_true, max_infections = 10)
+g$init(chains = 2,
+       n_infections = n_infections_true,
+       max_infections = 10)
 
 g$burn(iterations = 1e2)
 ```

@@ -61,7 +61,8 @@ glam_mcmc <- R6::R6Class(
         dplyr::select(-time) |>
         dplyr::group_split(ind, .keep = FALSE)
       
-      # get haplotype info
+      # get haplotype info, including setting haplo_freqs from data by default
+      # (can be overridden later)
       private$n_haplos <- length(unique(df_data$haplo))
       private$haplo_freqs <- df_data |>
         dplyr::group_by(haplo) |>
@@ -71,12 +72,21 @@ glam_mcmc <- R6::R6Class(
       
       # get observation time info
       df_data_time <- df_data |>
+        dplyr::arrange(ind, time) |>
         dplyr::group_by(ind) |>
-        dplyr::reframe(time = unique(time)) |>
-        dplyr::arrange(ind, time)
+        dplyr::reframe(time = unique(time))
       
       obs_time_list <- split(df_data_time$time, f = df_data_time$ind)
       private$obs_time_list <- obs_time_list
+      
+      # get start and end times per individual
+      df_data_start_end <- df_data_time |>
+        dplyr::group_by(ind) |>
+        dplyr::summarise(start_time = min(time),
+                         end_time = max(time))
+      
+      private$obs_time_start <- df_data_start_end$start_time
+      private$obs_time_end <- df_data_start_end$end_time
       
       # print summary of data import
       if (!silent) {
@@ -95,44 +105,57 @@ glam_mcmc <- R6::R6Class(
     #' @description
     #' Define model parameters.
     #' 
-    #' @param start_time TODO
-    #' @param end_time TODO
     #' @param chains the number of independent chains.
-    #' @param rungs TODO
+    #' @param haplo_freqs TODO
     #' @param max_infections TODO
+    #' @param lambda_prior TODO
+    #' @param theta_prior TODO
+    #' @param decay_rate_prior TODO
+    #' @param sens_prior TODO
     #' @param lambda TODO
     #' @param theta TODO
     #' @param decay_rate TODO
     #' @param sens TODO
     #' @param n_infections TODO
     #' @param infection_times TODO
-    #' @param haplo_freqs TODO
     #' @param w_list TODO
-    init = function(start_time,
-                    end_time,
-                    chains = 5,
-                    rungs = 1,
+    init = function(chains = 5,
+                    haplo_freqs = NULL,
                     max_infections = 5,
+                    lambda_prior = NULL,
+                    theta_prior = NULL,
+                    decay_rate_prior = NULL,
+                    sens_prior = NULL,
                     lambda = NULL,
                     theta = NULL,
                     decay_rate = NULL,
                     sens = NULL,
                     n_infections = NULL,
                     infection_times = NULL,
-                    haplo_freqs = NULL,
                     w_list = NULL
                     ) {
       
       # check inputs
-      assert_single_numeric(start_time)
-      obs_time_range <- range(unlist(private$obs_time_list))
-      assert_leq(start_time, obs_time_range[1], message = sprintf("start_time must be less than or equal to the first observation time (%s)", obs_time_range[1]))
-      assert_single_numeric(end_time)
-      assert_gr(end_time, start_time)
-      assert_greq(end_time, obs_time_range[2], message = sprintf("end_time must be greater than or equal to the last observation time (%s)", obs_time_range[2]))
       assert_single_pos_int(chains, zero_allowed = FALSE)
-      assert_single_pos_int(rungs, zero_allowed = FALSE)
+      if (!is.null(haplo_freqs)) {
+        assert_vector_bounded(haplo_freqs)
+        assert_length(haplo_freqs, private$n_haplos, message = sprintf("Must define %s haplotype frequencies to match the number found in the data", private$n_haplos))
+        assert_eq(sum(haplo_freqs), 1)
+      }
       assert_single_pos_int(max_infections, zero_allowed = FALSE)
+      if (!is.null(lambda_prior)) {
+        assert_class(lambda_prior, "function")
+      }
+      if (!is.null(theta_prior)) {
+        assert_class(theta_prior, "function")
+      }
+      if (!is.null(decay_rate_prior)) {
+        assert_class(decay_rate_prior, "function")
+      }
+      if (!is.null(sens_prior)) {
+        assert_class(sens_prior, "function")
+      }
+      
       if (!is.null(lambda)) {
         assert_single_pos(lambda, zero_allowed = TRUE)
       }
@@ -159,14 +182,12 @@ glam_mcmc <- R6::R6Class(
         } else {
           assert_eq(mapply(length, infection_times), n_infections, message = "If both n_infections and infection_times are defined then the lengths of infection_times must match the values in n_infections")
         }
-        mapply(function(x) {
-          assert_vector_bounded(x, left = start_time, right = end_time, message = "Infection times must be within the window defined by start_time and end_time")
-        }, infection_times)
-      }
-      if (!is.null(haplo_freqs)) {
-        assert_vector_bounded(haplo_freqs)
-        assert_length(haplo_freqs, private$n_haplos, message = sprintf("Must define %s haplotype frequencies to match the number found in the data", private$n_haplos))
-        assert_eq(sum(haplo_freqs), 1)
+        mapply(function(i) {
+          assert_vector_bounded(x = infection_times[i],
+                                left = private$obs_time_start[i],
+                                right = private$obs_time_end[i],
+                                message = "Infection times must be within the observation window for each individual")
+        }, seq_along(infection_times))
       }
       if (!is.null(w_list)) {
         assert_list(w_list)
@@ -196,6 +217,24 @@ glam_mcmc <- R6::R6Class(
         }, w_list, SIMPLIFY = FALSE)
       }
       
+      # set default priors
+      if (is.null(lambda_prior)) {
+        lambda_prior <- function(x) return(0)
+      }
+      if (is.null(theta_prior)) {
+        theta_prior <- function(x) return(0)
+      }
+      if (is.null(decay_rate_prior)) {
+        decay_rate_prior <- function(x) return(0)
+      }
+      if (is.null(sens_prior)) {
+        sens_prior <- function(x) return(0)
+      }
+      private$lambda_prior <- lambda_prior
+      private$theta_prior <- theta_prior
+      private$decay_rate_prior <- decay_rate_prior
+      private$sens_prior <- sens_prior
+      
       # which parameters need updating
       lambda_fixed <- !is.null(lambda)
       theta_fixed <- !is.null(theta)
@@ -215,6 +254,7 @@ glam_mcmc <- R6::R6Class(
       
       # initialise parameters in nested list over chains and then rungs
       param_list <- list()
+      rungs <- 1
       for (i in 1:chains) {
         param_list[[i]] <- list()
         for (j in 1:rungs) {
@@ -230,7 +270,9 @@ glam_mcmc <- R6::R6Class(
           if (!infection_times_fixed) {
             infection_times <- list()
             for (k in 1:private$n_samp) {
-              infection_times[[k]] <- sort(runif(n_infections[k], min = start_time, max = end_time))
+              infection_times[[k]] <- sort(runif(n_infections[k],
+                                                 min = private$obs_time_start[k],
+                                                 max = private$obs_time_end[k]))
             }
           }
           if (!w_list_fixed) {
@@ -253,13 +295,12 @@ glam_mcmc <- R6::R6Class(
       
       # initialise proposal standard deviations for all parameters
       proposal_sd <- list()
-      n_proposal_sd <- 5
       for (i in 1:chains) {
         proposal_sd[[i]] <- replicate(rungs, c(lambda = 1,
                                                theta = 1,
                                                decay_rate = 1,
                                                sens = 1,
-                                               infection_time = 1),
+                                               t_inf = 1),
                                       simplify = FALSE)
       }
       
@@ -277,12 +318,6 @@ glam_mcmc <- R6::R6Class(
       # initialise counters
       iteration_counter <- create_chain_phase_list(chains = chains, base = 0)
       duration <- create_chain_phase_list(chains = chains, base = 0)
-      acceptance_counter <- create_chain_phase_list(chains = chains,
-                                                    base = matrix(
-                                                      data = 0,
-                                                      nrow = rungs, 
-                                                      ncol = n_proposal_sd
-                                                    ))
       swap_acceptance_counter <- create_chain_phase_list(chains = chains,
                                                     base = rep(0, rungs - 1))
       
@@ -293,18 +328,14 @@ glam_mcmc <- R6::R6Class(
       }
       
       # store values
-      private$start_time <- start_time
-      private$end_time <- end_time
       private$chains <- chains
       private$rungs <- rungs
       private$max_infections <- max_infections
       private$param_list <- param_list
       private$param_update_list <- param_update_list
       private$proposal_sd <- proposal_sd
-      private$n_proposal_sd <- n_proposal_sd
       private$rng_list <- rng_list
       private$iteration_counter <- iteration_counter
-      private$acceptance_counter <- acceptance_counter
       private$swap_acceptance_counter <- swap_acceptance_counter
       private$duration <- duration
       
@@ -505,6 +536,14 @@ glam_mcmc <- R6::R6Class(
     n_haplos = NULL,
     haplo_freqs = NULL,
     obs_time_list = NULL,
+    obs_time_start = NULL,
+    obs_time_end = NULL,
+    
+    # prior distributions
+    lambda_prior = NULL,
+    theta_prior = NULL,
+    decay_rate_prior = NULL,
+    sens_prior = NULL,
     
     # program flow
     init_called = FALSE,
@@ -518,16 +557,10 @@ glam_mcmc <- R6::R6Class(
     param_list = NULL,
     param_update_list = NULL,
     proposal_sd = NULL,
-    n_proposal_sd = NULL,
     rng_list = NULL,
     iteration_counter = NULL,
-    acceptance_counter = NULL,
     swap_acceptance_counter = NULL,
     duration = NULL,
-    
-    # misc parameters
-    start_time = NULL,
-    end_time = NULL,
     
     # parameter draws
     lambda_store = NULL,
@@ -562,34 +595,38 @@ glam_mcmc <- R6::R6Class(
         # run this chain
         output_raw <- mcmc_cpp(private$list_data,                                 # data in list format
                                private$obs_time_list,                             # observation times
+                               private$obs_time_start,                            # observation start times
+                               private$obs_time_end,                              # observation end times
                                private$haplo_freqs,                               # haplo freqs
                                iterations,                                        # iterations
                                burnin,                                            # burnin
                                private$param_list[[chain]],                       # params
                                private$param_update_list,                         # which params to update
                                private$proposal_sd[[chain]],                      # proposal_sd
+                               private$lambda_prior,                              # prior function on lambda
+                               private$theta_prior,                               # prior function on theta
+                               private$decay_rate_prior,                          # prior function on decay_rate
+                               private$sens_prior,                                # prior function on sens
                                private$iteration_counter[[chain]][[phase_name]],  # iteration_counter_init
                                rep(1, private$rungs),                             # beta
-                               private$start_time,                                # start_time
-                               private$end_time,                                  # end_time
                                private$max_infections,                            # max infections
                                private$rng_list[[chain]],                         # rng_ptr
-                               interactive()                                      # logical; if running interactively. Useful for supressing progress bars when running Rmarkdown
+                               interactive()                                      # logical; if running interactively. Useful for suppressing progress bars when running Rmarkdown
         )
         
         # sync RNG
         private$rng_list[[chain]]$sync()
         
         # convert raw output objects if needed
-        acceptance_out <- matrix(unlist(output_raw$acceptance_out),
-                                 nrow = length(output_raw$acceptance_out),
-                                 byrow = TRUE)
         n_infections <- matrix(unlist(output_raw$n_infections),
                                nrow = length(output_raw$n_infections),
                                byrow = TRUE)
         
         # update params_list to final values of chain
         private$param_list[[chain]] <- output_raw$param_list_out
+        
+        # update proposal SDs
+        private$proposal_sd[[chain]] <- mapply(function(x) unlist(x), output_raw$prop_sd_list_out, SIMPLIFY = FALSE)
         
         # append parameter draws
         private$lambda_store[[chain]] <- c(private$lambda_store[[chain]], output_raw$lambda)
@@ -601,7 +638,6 @@ glam_mcmc <- R6::R6Class(
         
         # update counters
         private$iteration_counter[[chain]][[phase_name]] <- private$iteration_counter[[chain]][[phase_name]] + iterations
-        private$acceptance_counter[[chain]][[phase_name]] <- private$acceptance_counter[[chain]][[phase_name]] + acceptance_out
         private$swap_acceptance_counter[[chain]][[phase_name]] <- private$swap_acceptance_counter[[chain]][[phase_name]] + output_raw$swap_acceptance_out
         private$duration[[chain]][[phase_name]] <- private$duration[[chain]][[phase_name]] + output_raw$dur
         
@@ -614,13 +650,13 @@ glam_mcmc <- R6::R6Class(
       chain <- 1
       debug_algo1_cpp(private$list_data,                                 # data in list format
                       private$obs_time_list,                             # observation times
+                      private$obs_time_start,                            # observation start times
+                      private$obs_time_end,                              # observation end times
                       private$haplo_freqs,                               # haplo freqs
                       private$param_list[[chain]],                       # params
                       private$param_update_list,                         # which params to update
                       private$proposal_sd[[chain]],                      # proposal_sd
                       rep(1, private$rungs),                             # beta
-                      private$start_time,                                # start_time
-                      private$end_time,                                  # end_time
                       private$max_infections,                            # max infections
                       private$rng_list[[chain]])                         # rng_ptr
     }
