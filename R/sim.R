@@ -28,7 +28,7 @@
 #' @param return_full Boolean (Default \code{TRUE}). If \code{TRUE} then
 #'   return true values of hidden variables alongside observed data.
 #'
-#' @importFrom stats rbinom rexp rpois runif
+#' @importFrom stats rbinom rexp rpois runif rmultinom
 #' @export
 
 sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,

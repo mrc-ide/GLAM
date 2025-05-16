@@ -67,18 +67,19 @@ Invisibly returns `NULL`. This is an R6 “initialize” method and
 Define model parameters.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{glam_mcmc$init(
-  start_time,
-  end_time,
   chains = 5,
-  rungs = 1,
+  haplo_freqs = NULL,
   max_infections = 5,
+  lambda_prior = NULL,
+  theta_prior = NULL,
+  decay_rate_prior = NULL,
+  sens_prior = NULL,
   lambda = NULL,
   theta = NULL,
   decay_rate = NULL,
   sens = NULL,
   n_infections = NULL,
   infection_times = NULL,
-  haplo_freqs = NULL,
   w_list = NULL
 )}\if{html}{\out{</div>}}
 }
@@ -86,15 +87,19 @@ Define model parameters.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{start_time}}{TODO}
-
-\item{\code{end_time}}{TODO}
-
 \item{\code{chains}}{the number of independent chains.}
 
-\item{\code{rungs}}{TODO}
+\item{\code{haplo_freqs}}{TODO}
 
 \item{\code{max_infections}}{TODO}
+
+\item{\code{lambda_prior}}{TODO}
+
+\item{\code{theta_prior}}{TODO}
+
+\item{\code{decay_rate_prior}}{TODO}
+
+\item{\code{sens_prior}}{TODO}
 
 \item{\code{lambda}}{TODO}
 
@@ -107,8 +112,6 @@ Define model parameters.
 \item{\code{n_infections}}{TODO}
 
 \item{\code{infection_times}}{TODO}
-
-\item{\code{haplo_freqs}}{TODO}
 
 \item{\code{w_list}}{TODO}
 }

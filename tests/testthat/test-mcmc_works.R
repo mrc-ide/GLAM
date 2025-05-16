@@ -18,10 +18,11 @@ test_that("basic mcmc (burn-in + sampling) runs without error", {
                          sens = sens)
   
   # create mcmc object
-  g <- glam_mcmc$new(df_data = sim_data$df_data)
+  g <- glam_mcmc$new(df_data = sim_data$df_data,
+                     silent = TRUE)
   
   # set parameters
-  g$init(start_time = 0, end_time = 10, chains = 3, rungs = 5)
+  g$init()
   
   # run mcmc
   g$burn(iterations = 1e2, silent = TRUE)
