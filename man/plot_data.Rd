@@ -16,6 +16,6 @@ of rows when plotting multiple individuals.}
 }
 \description{
 Produces a plot showing the haplotypes observed at each
-  observation time. If the input data spans multiple individuals then these
-  will be faceted.
+observation time. If the input data spans multiple individuals then these
+will be faceted.
 }

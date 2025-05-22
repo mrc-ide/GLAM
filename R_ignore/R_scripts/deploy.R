@@ -25,6 +25,15 @@ theta <- 4
 decay_rate <- 0.5
 sens <- 0.95
 max_infections <- 10
+treatment_times <- replicate(n_cohort, NULL)
+treatment_times[3] <- 2
+treatment_times[5] <- c(2, 5)
+
+t <- seq(0, 10, l = 101)
+ft <- get_treatment_protection(t, treatment_times = 2,
+                               treatment_duration_90 = 5, 
+                               treatment_duration_50 = 6)
+plot(t, ft)
 
 # simulate cohort
 sim1 <- sim_cohort(n = n_cohort,
@@ -34,6 +43,10 @@ sim1 <- sim_cohort(n = n_cohort,
                    theta = theta,
                    decay_rate = decay_rate,
                    sens = sens,
+                   treatment_times = treatment_times,
+                   treatment_duration_90 = 5,
+                   treatment_duration_50 = 5.1, 
+                   max_protection = 1.0,
                    n_inf = NULL,
                    return_full = TRUE)
 

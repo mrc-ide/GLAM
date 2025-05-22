@@ -12,6 +12,10 @@ sim_cohort(
   theta,
   decay_rate,
   sens,
+  treatment_times = NULL,
+  treatment_duration_90 = 20,
+  treatment_duration_50 = 30,
+  max_protection = 1,
   n_inf = NULL,
   return_full = TRUE
 )
@@ -32,6 +36,14 @@ Must be at least two unique time points increasing in value.}
 
 \item{sens}{sensitivity of sequencing. Assumed the same for all haplotypes.}
 
+\item{treatment_times}{A numeric vector of treatment times (must be on the same time scale as \code{observation_times}).}
+
+\item{treatment_duration_90}{Time at which protection is still at 90\% of \code{max_protection} after a treatment. Must be less than \code{treatment_duration_50}.}
+
+\item{treatment_duration_50}{Time (in the same units as \code{observation_times}) at which protection wanes to 50\% of \code{max_protection} after a treatment. Must be greater than \code{treatment_duration_90}.}
+
+\item{max_protection}{The maximum protection conferred immediately after treatment (default is 1.0).}
+
 \item{n_inf}{if \code{NULL} then number of infections is drawn from the
 model, but this parameter can also be used to manually set this value. If
 so, input as a vector over individuals.}
@@ -41,7 +53,7 @@ return true values of hidden variables alongside observed data.}
 }
 \description{
 Simulate a cohort of individuals from the generative model. Runs
-  \code{sim_ind()} multiple times and reformats observed output into a
-  data.frame. Also keeps hold of the true states of all individuals for
-  reference.
+\code{sim_ind()} multiple times and reformats observed output into a
+data.frame. Also keeps hold of the true states of all individuals for
+reference.
 }

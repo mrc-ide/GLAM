@@ -16,6 +16,7 @@ Description: Malaria infections often contain multiple haplotypes. When
 License: MIT + file LICENSE
 Encoding: UTF-8
 RoxygenNote: 7.3.2
+Roxygen: list(markdown = TRUE)
 LinkingTo: 
     cpp11,
     dust,

@@ -9,13 +9,13 @@ plot_sim(sim_list, ind = NULL, nrow = NULL)
 \arguments{
 \item{sim_list}{A list with at least two elements:
 \describe{
-  \item{\code{raw_list}}{A list of simulation output objects, each with
-    components \code{t_inf}, \code{clear_init}, \code{w_init},
-    \code{clear_inf}, \code{w_inf}, \code{samp_time},
-    \code{state_true}, and \code{state_obs}.}
-  \item{\code{df_data}}{A \code{data.frame} with columns
-    \code{haplo} and \code{time}, used to determine the number of
-    haplotypes (\code{n_haplo}) and observation times (\code{n_obs}).}
+\item{\code{raw_list}}{A list of simulation output objects, each with
+components \code{t_inf}, \code{clear_init}, \code{w_init},
+\code{clear_inf}, \code{w_inf}, \code{samp_time},
+\code{state_true}, and \code{state_obs}.}
+\item{\code{df_data}}{A \code{data.frame} with columns
+\code{haplo} and \code{time}, used to determine the number of
+haplotypes (\code{n_haplo}) and observation times (\code{n_obs}).}
 }}
 
 \item{ind}{Integer vector or \code{NULL}. Which indices of
@@ -26,18 +26,20 @@ of rows when plotting multiple individuals.}
 }
 \value{
 A \pkg{ggplot2} object with:
-  \itemize{
-    \item Infection times as vertical dashed lines.
-    \item Initial infections (pink segments).
-    \item Subsequent infections (black segments).
-    \item Observed haplotype states as coloured points.
-  }
+\itemize{
+\item Infection times as vertical dashed lines.
+\item Initial infections (pink segments).
+\item Subsequent infections (black segments).
+\item Observed haplotype states as coloured points.
+}
 }
 \description{
 Given a \code{sim_list} produced by your simulation routines, \code{plot_sim()}
 will draw, for each individual:
-* Vertical dashed lines at each true infection time.
-* Pink segments showing any initial infections.
-* Black segments for new infections occurring after the start.
-* Points coloured by observed vs.\ unobserved haplotype states.
+\itemize{
+\item Vertical dashed lines at each true infection time.
+\item Pink segments showing any initial infections.
+\item Black segments for new infections occurring after the start.
+\item Points coloured by observed vs.\ unobserved haplotype states.
+}
 }

@@ -11,6 +11,10 @@ sim_ind(
   theta,
   decay_rate,
   sens,
+  treatment_times = NULL,
+  treatment_duration_90 = 20,
+  treatment_duration_50 = 30,
+  max_protection = 1,
   ind_name = "ind1",
   n_inf = NULL,
   t_inf = NULL,
@@ -31,6 +35,14 @@ Must be at least two unique time points increasing in value.}
 
 \item{sens}{sensitivity of sequencing. Assumed the same for all haplotypes.}
 
+\item{treatment_times}{A numeric vector of treatment times (must be on the same time scale as \code{observation_times}).}
+
+\item{treatment_duration_90}{Time at which protection is still at 90\% of \code{max_protection} after a treatment. Must be less than \code{treatment_duration_50}.}
+
+\item{treatment_duration_50}{Time (in the same units as \code{observation_times}) at which protection wanes to 50\% of \code{max_protection} after a treatment. Must be greater than \code{treatment_duration_90}.}
+
+\item{max_protection}{The maximum protection conferred immediately after treatment (default is 1.0).}
+
 \item{ind_name}{the name given to this individual in the returned data.frame.}
 
 \item{n_inf}{if \code{NULL} then number of infections is drawn from the
@@ -45,13 +57,13 @@ return true values of hidden variables alongside observed data.}
 }
 \description{
 Simulate a single individual from the generative model. Returns
-  outputs as a list, including observed data as well as optionally hidden
-  true states. If hidden states are returned then \code{plot_ind()} can be
-  used to visualise this simulation.
+outputs as a list, including observed data as well as optionally hidden
+true states. If hidden states are returned then \code{plot_ind()} can be
+used to visualise this simulation.
 }
 \details{
 Note that the method for simulating data is deliberately different
-  from the way that it is represented in the inference step, although it is
-  mathematically equivalent. This allows us to check that our different
-  representations of the process are consistent.
+from the way that it is represented in the inference step, although it is
+mathematically equivalent. This allows us to check that our different
+representations of the process are consistent.
 }

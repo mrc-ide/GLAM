@@ -19,6 +19,10 @@
 #' @param theta COI intensity parameter.
 #' @param decay_rate rate at which haplotypes clear.
 #' @param sens sensitivity of sequencing. Assumed the same for all haplotypes.
+#' @param treatment_times A numeric vector of treatment times (must be on the same time scale as `observation_times`).
+#' @param treatment_duration_90 Time at which protection is still at 90% of `max_protection` after a treatment. Must be less than `treatment_duration_50`.
+#' @param treatment_duration_50 Time (in the same units as `observation_times`) at which protection wanes to 50% of `max_protection` after a treatment. Must be greater than `treatment_duration_90`.
+#' @param max_protection The maximum protection conferred immediately after treatment (default is 1.0).
 #' @param ind_name the name given to this individual in the returned data.frame.
 #' @param n_inf if \code{NULL} then number of infections is drawn from the
 #'   model, but this parameter can also be used to manually set this value.
@@ -32,6 +36,8 @@
 #' @export
 
 sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
+                    treatment_times = NULL, treatment_duration_90 = 20,
+                    treatment_duration_50 = 30, max_protection = 1.0,
                     ind_name = "ind1", n_inf = NULL, t_inf = NULL, return_full = TRUE) {
   
   # check inputs
@@ -45,6 +51,13 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
   assert_single_pos(theta, zero_allowed = FALSE)
   assert_single_pos(decay_rate)
   assert_single_bounded(sens)
+  if (!is.null(treatment_times)) {
+    assert_vector_numeric(treatment_times)
+  }
+  assert_single_pos(treatment_duration_90)
+  assert_single_pos(treatment_duration_50)
+  assert_gr(treatment_duration_50, treatment_duration_90)
+  assert_single_bounded(max_protection)
   if (!is.null(n_inf)) {
     assert_single_pos_int(n_inf)
   }
@@ -79,12 +92,24 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
   # to avoid this.
   
   # draw the number of infections that occur during the observation period and
-  # the timings of these infections
+  # the timings of these infections. Ignore treatment at this stage
   if (is.null(n_inf)) {
     n_inf <- rpois(1, lambda*t_period)
   }
   if (is.null(t_inf)) {
     t_inf <- sort(runif(n_inf, start_time, end_time))
+  }
+  
+  # apply treatment and update number of infections
+  if (!is.null(treatment_times)) {
+    protection_at_infection <- get_treatment_protection(observation_times = t_inf,
+                                                        treatment_times = treatment_times, 
+                                                        treatment_duration_50 = treatment_duration_50,
+                                                        treatment_duration_90 = treatment_duration_90, 
+                                                        max_protection = max_protection)
+    breakthrough <- (runif(n_inf) > protection_at_infection)
+    n_inf <- sum(breakthrough)
+    t_inf <- t_inf[breakthrough]
   }
   
   # consider whether this individual initialises positive for each haplotype.
@@ -121,8 +146,8 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
   }
   
   #------------------------------------------------
-  # truncate clearance times so they cannot go past the next infection time or
-  # the end of the study period
+  # truncate clearance times so they cannot go past the next infection time, the
+  # next treatment time, or the end of the study period
   
   # initial clearance times
   for (i in seq_len(n_inf)) {
@@ -130,13 +155,21 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
     clear_init[w] <- pmin(clear_init[w], t_inf[i])
   }
   clear_init <- pmin(clear_init, end_time)
+  if (!is.null(treatment_times)) {
+    clear_init <- pmin(clear_init, min(treatment_times))
+  }
   
   # new infection clearance times
   t_running <- rep(end_time, n_haplo)
   for (i in n_inf:1) {
     clear_inf[i,] <- pmin(clear_inf[i,], t_running)
     t_running[w_inf[i,] == TRUE] <- t_inf[i]
+    pending_treatment_times <- treatment_times[treatment_times > t_inf[i]]
+    if (length(pending_treatment_times) > 0) {
+      clear_inf[i,] <- pmin(clear_inf[i,], min(pending_treatment_times))
+    }
   }
+  
   
   #------------------------------------------------
   # work out the true and observed haplo state at all observation times
@@ -171,7 +204,8 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
   #------------------------------------------------
   # return as list
   
-  ret <- list(df_data = df_data)
+  ret <- list(df_data = df_data,
+              treatment_times = treatment_times)
   if (return_full) {
     ret <- c(ret, list(t_inf = t_inf,
                        w_init = w_init,
@@ -203,10 +237,28 @@ sim_ind <- function(samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
 #' @export
 
 sim_cohort <- function(n, samp_time, haplo_freqs, lambda, theta, decay_rate, sens,
+                       treatment_times = NULL, treatment_duration_90 = 20,
+                       treatment_duration_50 = 30, max_protection = 1.0,
                        n_inf = NULL, return_full = TRUE) {
   
-  # check inputs
+  # check inputs (some ignored as will be checked in sim_ind)
+  assert_single_pos_int(n)
   assert_vector_pos(lambda)
+  if (!is.null(treatment_times)) {
+    assert_list(treatment_times)
+    assert_length(treatment_times, n)
+    
+    is_numeric <- mapply(function(x) {
+      if (!is.null(x)) {
+        assert_vector_numeric(x)
+      } else {
+        return(TRUE)
+      }
+    }, treatment_times)
+    if (!all(is_numeric)) {
+      stop("treatment_times must be a list with an element for each individual. Each element is a vector of treatment times (numeric)")
+    }
+  }
   if (!is.null(n_inf)) {
     assert_vector_int(n_inf)
     assert_length(n_inf, n)
@@ -225,7 +277,11 @@ sim_cohort <- function(n, samp_time, haplo_freqs, lambda, theta, decay_rate, sen
                              lambda = lambda[i],
                              theta = theta,
                              decay_rate = decay_rate,
-                             sens = sens,
+                             sens = sens, 
+                             treatment_times = treatment_times[[i]],
+                             treatment_duration_90 = treatment_duration_90,
+                             treatment_duration_50 = treatment_duration_50, 
+                             max_protection = max_protection,
                              ind_name = i,
                              n_inf = n_inf[i],
                              return_full = return_full)
@@ -235,8 +291,21 @@ sim_cohort <- function(n, samp_time, haplo_freqs, lambda, theta, decay_rate, sen
   df_data <- mapply(function(x) x$df_data, raw_list, SIMPLIFY = FALSE) |>
     bind_rows()
   
+  # combine treatment data into a single data.frame over all individuals
+  df_treatment <- mapply(function(x) {
+    if (is.null(x$treatment_times)) {
+      ret <- NULL
+    } else {
+      ret <- data.frame(ind = x$df_data$ind[1],
+                        treatment_times = x$treatment_times)
+    }
+    ret
+  }, raw_list, SIMPLIFY = FALSE) |>
+    bind_rows()
+  
   # return as list
   ret <- list(df_data = df_data,
+              df_treatment = df_treatment,
               raw_list = raw_list)
   return(ret)
 }

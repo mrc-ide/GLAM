@@ -35,7 +35,7 @@ An R6 generator for running Markov Chain Monte Carlo (MCMC) in GLAM.
 \if{html}{\out{<a id="method-glam_mcmc-new"></a>}}
 \if{latex}{\out{\hypertarget{method-glam_mcmc-new}{}}}
 \subsection{Method \code{new()}}{
-Performs input validation on `df_data`.
+Performs input validation on \code{df_data}.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{glam_mcmc$new(df_data, silent = FALSE)}\if{html}{\out{</div>}}
 }
@@ -44,20 +44,22 @@ Performs input validation on `df_data`.
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{df_data}}{A data.frame or tibble. Must contain the columns:
-- `ind` (identifier for each sample/individual),
-- `haplo` (haplotype label),
-- `time` (observation time point),
-- `positive` (binary indicator: 0 or 1).}
+\itemize{
+\item \code{ind} (identifier for each sample/individual),
+\item \code{haplo} (haplotype label),
+\item \code{time} (observation time point),
+\item \code{positive} (binary indicator: 0 or 1).
+}}
 
-\item{\code{silent}}{Logical scalar. If `FALSE` (the default), informational
+\item{\code{silent}}{Logical scalar. If \code{FALSE} (the default), informational
 messages about loading progress and data summary are printed to the
-console. If `TRUE`, message printing is suppressed.}
+console. If \code{TRUE}, message printing is suppressed.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-Invisibly returns `NULL`. This is an R6 “initialize” method and
-  is used for its side effects on the object’s private fields.
+Invisibly returns \code{NULL}. This is an R6 “initialize” method and
+is used for its side effects on the object’s private fields.
 }
 }
 \if{html}{\out{<hr>}}
